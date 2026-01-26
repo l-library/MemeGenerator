@@ -11,9 +11,12 @@ QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
+    // 引入QT信号和槽机制
     Q_OBJECT
 
 public:
+    // 构造函数中的parent是指父窗口
+    // 如果parent是0，表示窗口是一个顶层的窗口
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
