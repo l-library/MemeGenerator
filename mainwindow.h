@@ -22,5 +22,6 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    void initMenuBar();
 };
 #endif // MAINWINDOW_H
