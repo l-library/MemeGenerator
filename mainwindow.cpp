@@ -4,6 +4,8 @@
 #include <QMenu>
 #include <QAction>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <qimagereader.h>
 #include <QDebug>
 #include <QPushButton>
 #include <ui_mainwindow.h>
@@ -26,7 +28,12 @@ MainWindow::MainWindow(QWidget *parent)
     button->move(0, 40);
 
     connect(button, &QPushButton::clicked, this, [=]()
-            { qDebug() << "pressed"; });
+            {
+            QDialog* dialog = new QDialog(this);
+        dialog->setWindowTitle(tr("Hello, dialog!"));
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+                });
 }
 
 void MainWindow::initMenuBar() {
@@ -149,15 +156,56 @@ void MainWindow::onNewFile() {
 }
 
 void MainWindow::onOpenFile() {
-    QMessageBox::information(this, "打开文件", "打开文件功能");
+    // 创建格式过滤器
+    QString filter = "图片 (";
+    QList<QByteArray> formats = QImageReader::supportedImageFormats();
+    for (int i = 0; i < formats.size(); ++i) {
+        filter += "*." + QString(formats[i]) + " ";
+    }
+    filter += ");;";
+
+    // 常用图片格式过滤器
+    filter += "JPEG (*.jpg *.jpeg);;"
+              "PNG (*.png);;"
+              "BMP (*.bmp);;"
+              "GIF (*.gif);;"
+              "TIFF (*.tif *.tiff);;"
+              "所有文件 (*.*)";
+    QString path = QFileDialog::getOpenFileName(this,"选择打开的文件",".",filter);
+    if(path.isEmpty()||!QFile::exists(path)){
+        QMessageBox::warning(this,"warning",QString("文件打开失败！"));
+        return;
+    }
+    QImage image;
+    if(!image.load(path))
+    {
+        QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
+        return;
+    }
+    QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
+                                                        .arg(image.size().rheight())
+                                                        .arg(image.size().rwidth())
+                                                        .arg(image.depth()));
+
+    // 显示、处理图像
+    // 在QLabel中显示
+    // QLabel *label = new QLabel;
+    // label->setPixmap(QPixmap::fromImage(image));
+
+    // 保存为其他格式
+    // if (image.save("converted.png", "PNG")) {
+    //     qDebug() << "已保存为PNG格式";
+    // }
 }
 
 void MainWindow::onSaveFile(){};
 void MainWindow::onSaveAsFile(){};
-void MainWindow::onExit(){};
+void MainWindow::onExit()
+{
+    this->close();
+}
 void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
-void MainWindow::onAbout(){};
 void MainWindow::onZoomIn(){};
 void MainWindow::onZoomOut(){};
 void MainWindow::onCopy(){};
@@ -166,6 +214,11 @@ void MainWindow::onInsertPicture(){};
 void MainWindow::onInsertText(){};
 void MainWindow::onCutting(){};
 void MainWindow::onFilter(){};
+void MainWindow::onAbout()
+{
+    QString message = "表情包制作器 V1.0\n项目地址：XXXXXXXXXXXXXXXXXX";
+    QMessageBox::about(this,"关于",message);
+}
 
 // 备用默认配置
 void MainWindow::setupDefaultMenuConfig() {
@@ -185,6 +238,8 @@ void MainWindow::setupDefaultMenuConfig() {
     fileMenu.title = "帮助(&H)";
     fileMenu.name = "menu_help";
     m_menuConfigs.append(fileMenu);
+    // 显示错误信息
+    QMessageBox::critical(this,"错误","加载菜单栏配置错误！");
 }
 
 
