@@ -7,6 +7,9 @@ QT_BEGIN_NAMESPACE
 
 // 向前声明
 struct MenuConfig;
+class QGridLayout;
+class QGraphicsView;
+class QGraphicsScene;
 
 namespace Ui {
 class MainWindow;
@@ -53,5 +56,10 @@ private:
 
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
+    QGridLayout* m_grid_layout;            // 网格布局
+    QGraphicsView* m_graphics_view;
+    QGraphicsScene* m_graphics_scene;
+    // 当前图像状态
+    double m_current_scale;
 };
 #endif // MAINWINDOW_H

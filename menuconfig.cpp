@@ -82,15 +82,12 @@ QKeySequence::StandardKey MenuConfigManager::stringToStandardKey(const QString& 
         {"Redo", QKeySequence::Redo},
         {"ZoomIn", QKeySequence::ZoomIn},
         {"ZoomOut", QKeySequence::ZoomOut},
-        {"Redo", QKeySequence::Redo},
         {"Cut", QKeySequence::Cut},
         {"Copy", QKeySequence::Copy},
         {"Paste", QKeySequence::Paste},
         {"Delete", QKeySequence::Delete},
         {"Find", QKeySequence::Find},
         {"Replace", QKeySequence::Replace},
-        {"ZoomIn", QKeySequence::ZoomIn},
-        {"ZoomOut", QKeySequence::ZoomOut},
         {"HelpContents", QKeySequence::HelpContents},
         {"WhatsThis", QKeySequence::WhatsThis}
     };

@@ -9,6 +9,10 @@
 #include <QDebug>
 #include <QPushButton>
 #include <ui_mainwindow.h>
+#include <QLabel>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QVBoxLayout>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -24,16 +28,26 @@ MainWindow::MainWindow(QWidget *parent)
     // 菜单栏初始化
     initMenuBar();
 
-    auto button = new QPushButton("test", this);
-    button->move(0, 40);
+    // 创建网格布局
+    m_grid_layout= new QGridLayout(this);
+    // 设置行和列的比例
+    m_grid_layout->setRowStretch(0, 20);  // 第一行占20%
+    m_grid_layout->setRowStretch(1, 60);  // 第二行占60%
+    m_grid_layout->setRowStretch(2, 20);  // 第三行占20%
+    m_grid_layout->setColumnStretch(0, 10);  // 第一列占20%
+    m_grid_layout->setColumnStretch(1, 60);  // 第二列占60%
+    m_grid_layout->setColumnStretch(2, 10);  // 第三列占20%
+    setCentralWidget(new QWidget(this));
+    centralWidget()->setLayout(m_grid_layout);
 
-    connect(button, &QPushButton::clicked, this, [=]()
-            {
-            QDialog* dialog = new QDialog(this);
-        dialog->setWindowTitle(tr("Hello, dialog!"));
-            dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
-                });
+    // 图像视图初始化
+    m_graphics_scene = new QGraphicsScene(this);
+    m_graphics_view = new QGraphicsView(this);
+    m_graphics_view->setScene(m_graphics_scene);
+    // 添加view到布局
+    m_grid_layout->addWidget(m_graphics_view,1,1);
+
+    m_current_scale = 1.0;
 }
 
 void MainWindow::initMenuBar() {
@@ -188,9 +202,7 @@ void MainWindow::onOpenFile() {
                                                         .arg(image.depth()));
 
     // 显示、处理图像
-    // 在QLabel中显示
-    // QLabel *label = new QLabel;
-    // label->setPixmap(QPixmap::fromImage(image));
+    m_graphics_scene->addPixmap(QPixmap::fromImage(image));
 
     // 保存为其他格式
     // if (image.save("converted.png", "PNG")) {
@@ -206,8 +218,16 @@ void MainWindow::onExit()
 }
 void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
-void MainWindow::onZoomIn(){};
-void MainWindow::onZoomOut(){};
+void MainWindow::onZoomIn()
+{
+    m_current_scale*=1.2;
+    m_graphics_view->scale(1.2,1.2);
+}
+void MainWindow::onZoomOut()
+{
+    m_current_scale*=0.8;
+    m_graphics_view->scale(0.8,0.8);
+}
 void MainWindow::onCopy(){};
 void MainWindow::onPaste(){};
 void MainWindow::onInsertPicture(){};
@@ -216,8 +236,9 @@ void MainWindow::onCutting(){};
 void MainWindow::onFilter(){};
 void MainWindow::onAbout()
 {
-    QString message = "表情包制作器 V1.0\n项目地址：XXXXXXXXXXXXXXXXXX";
-    QMessageBox::about(this,"关于",message);
+    QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v1.0</h3>"
+            "<p>开发者：@l-library</p>"
+            "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
 
 // 备用默认配置
