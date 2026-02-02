@@ -1,0 +1,193 @@
+{
+    "version": "1.0",
+    "menus": [
+        {
+            "title": "文件(&F)",
+            "name": "menu_file",
+            "items": [
+                {
+                    "id": "action_new",
+                    "text": "新建文件",
+                    "icon": ":/icons/filenew.png",
+                    "shortcut": "Ctrl+N",
+                    "standardKey": "New",
+                    "statusTip": "新建空白文件",
+                    "enabled": true,
+                    "checkable": false,
+                    "separator": false,
+                    "slot": "onNewFile"
+                },
+                {
+                    "id": "action_open",
+                    "text": "打开文件",
+                    "icon": ":/icons/fileopen.png",
+                    "shortcut": "Ctrl+O",
+                    "standardKey": "Open",
+                    "statusTip": "打开图片文件",
+                    "enabled": true,
+                    "slot": "onOpenFile"
+                },
+                {
+                    "separator": true
+                },
+                {
+                    "id": "action_save",
+                    "text": "保存文件",
+                    "icon": ":/icons/filesave.png",
+                    "shortcut": "Ctrl+S",
+                    "standardKey": "Save",
+                    "statusTip": "保存当前文件",
+                    "enabled": false,
+                    "slot": "onSaveFile"
+                },
+                {
+                    "id": "action_saveas",
+                    "text": "另存为",
+                    "icon": ":/icons/filesaveas.png",
+                    "shortcut": "Ctrl+Shift+S",
+                    "standardKey": "SaveAs",
+                    "statusTip": "将当前文件另存在指定位置",
+                    "slot": "onSaveAsFile"
+                },
+                {
+                    "separator": true
+                },
+                {
+                    "id": "action_exit",
+                    "text": "退出",
+                    "icon": ":/icons/exit.png",
+                    "shortcut": "Ctrl+Q",
+                    "statusTip": "退出应用程序",
+                    "slot": "onExit"
+                }
+            ]
+        },
+        {
+            "title": "编辑(&E)",
+            "name": "menu_edit",
+            "items": [
+                {
+                    "id": "action_undo",
+                    "text": "撤销",
+                    "icon": ":/icons/undo.png",
+                    "shortcut": "Ctrl+Z",
+                    "standardKey": "Undo",
+                    "statusTip": "撤销上一步操作",
+                    "enabled": false,
+                    "slot": "onUndo"
+                },
+                {
+                    "id": "action_redo",
+                    "text": "重做",
+                    "icon": ":/icons/redo.png",
+                    "shortcut": "Ctrl+Y",
+                    "standardKey": "Redo",
+                    "statusTip": "重做撤销的操作",
+                    "enabled": false,
+                    "slot": "onRedo"
+                },
+                {
+                    "separator": true
+                },
+                {
+                    "id": "action_zoomin",
+                    "text": "放大",
+                    "icon": ":/icons/zoomin.png",
+                    "shortcut": "Ctrl+Plus",
+                    "standardKey": "ZoomIn",
+                    "statusTip": "放大图片",
+                    "slot": "onZoomIn"
+                },
+                {
+                    "id": "action_zoomout",
+                    "text": "缩小",
+                    "icon": ":/icons/zoomout.png",
+                    "shortcut": "Ctrl+Minus",
+                    "standardKey": "ZoomOut",
+                    "statusTip": "缩小图片",
+                    "slot": "onZoomOut"
+                },
+                {
+                    "separator": true
+                },
+                {
+                    "id": "action_copy",
+                    "text": "复制",
+                    "icon": ":/icons/copy.png",
+                    "shortcut": "Ctrl+C",
+                    "standardKey": "Copy",
+                    "statusTip": "复制当前选中",
+                    "slot": "onCopy"
+                },
+                {
+                    "id": "action_Paste",
+                    "text": "粘贴",
+                    "icon": ":/icons/paste.png",
+                    "shortcut": "Ctrl+V",
+                    "standardKey": "Paste",
+                    "statusTip": "粘贴剪贴板中的内容",
+                    "slot": "onPaste"
+                }
+            ]
+        },
+        {
+            "title": "插入(&I)",
+            "name": "menu_insert",
+            "items": [
+                {
+                    "id": "action_insert_picture",
+                    "text": "插入图片",
+                    "icon": ":/icons/insertpicture.png",
+                    "statusTip": "选择一张图片添加到顶部",
+                    "slot": "onInsertPicture"
+                },
+                {
+                    "id": "action_insert_text",
+                    "text": "插入文本",
+                    "icon": ":/icons/inserttext.png",
+                    "statusTip": "创建一个文本框用于输入文本",
+                    "slot": "onInsertText"
+                }
+            ]
+        },
+        {
+            "title": "工具(&T)",
+            "name": "menu_tool",
+            "items": [
+                {
+                    "id": "action_cutting",
+                    "text": "裁剪图片",
+                    "icon": ":/icons/cutting.png",
+                    "statusTip": "裁剪当前图片",
+                    "slot": "onCutting"
+                }
+            ]
+        },
+        {
+            "title": "效果(&E)",
+            "name": "menu_effect",
+            "items": [
+                {
+                    "id": "action_filter",
+                    "text": "添加滤镜",
+                    "icon": ":/icons/filtereffect.png",
+                    "statusTip": "选择一个滤镜加入当前文件",
+                    "slot": "onFilter"
+                }
+            ]
+        },
+        {
+            "title": "帮助(&H)",
+            "name": "menu_help",
+            "items": [
+                {
+                    "id": "action_about",
+                    "text": "关于(&A)",
+                    "icon": ":/icons/about.png",
+                    "statusTip": "显示关于信息",
+                    "slot": "onAbout"
+                }
+            ]
+        }
+    ]
+}

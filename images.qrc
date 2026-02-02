@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/fileopen.png</file>
+        <file>icons/filenew.png</file>
+        <file>icons/filesave.png</file>
+        <file>icons/filesaveas.png</file>
+        <file>icons/MemeGenerator.png</file>
+        <file>config/MenuConfig.json</file>
+        <file>icons/exit.png</file>
+        <file>icons/redo.png</file>
+        <file>icons/undo.png</file>
+        <file>icons/zoomin.png</file>
+        <file>icons/zoomout.png</file>
+        <file>icons/about.png</file>
+        <file>icons/copy.png</file>
+        <file>icons/cutting.png</file>
+        <file>icons/filtereffect.png</file>
+        <file>icons/insertpicture.png</file>
+        <file>icons/inserttext.png</file>
+        <file>icons/paste.png</file>
+    </qresource>
+</RCC>

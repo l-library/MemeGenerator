@@ -4,6 +4,10 @@
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
+
+// 向前声明
+struct MenuConfig;
+
 namespace Ui {
 class MainWindow;
 }
@@ -20,7 +24,34 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    // 槽函数
+    void onNewFile();
+    void onOpenFile();
+    void onSaveFile();
+    void onSaveAsFile();
+    void onExit();
+    void onUndo();
+    void onRedo();
+    void onAbout();
+    void onZoomIn();
+    void onZoomOut();
+    void onCopy();
+    void onPaste();
+    void onInsertPicture();
+    void onInsertText();
+    void onCutting();
+    void onFilter();
+
 private:
     Ui::MainWindow *ui;
+    void initMenuBar();
+    void loadMenuConfig();
+    void createMenuFromConfig();
+    void connectActionToSlot(const QString& actionId, QAction* action);
+    void setupDefaultMenuConfig();
+
+    QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
+    QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
 };
 #endif // MAINWINDOW_H
