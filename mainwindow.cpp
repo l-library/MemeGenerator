@@ -13,9 +13,14 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QVBoxLayout>
+#include <QGraphicsPixmapItem>
+#include <QGraphicsDropShadowEffect>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow),
+     m_grid_layout(nullptr),m_graphics_scene(nullptr)
+    , m_graphics_view(nullptr), m_current_z_value(0)
+    ,m_view_scale(1.0)
 {
     ui->setupUi(this);
 
@@ -37,21 +42,34 @@ MainWindow::MainWindow(QWidget *parent)
     m_grid_layout->setColumnStretch(0, 10);  // 第一列占20%
     m_grid_layout->setColumnStretch(1, 60);  // 第二列占60%
     m_grid_layout->setColumnStretch(2, 10);  // 第三列占20%
+
     setCentralWidget(new QWidget(this));
     centralWidget()->setLayout(m_grid_layout);
 
+    // 初始化图像视图
+    initGraphicsView();
+}
+
+void MainWindow::initMenuBar() {
+    createMenuFromConfig();
+}
+
+void MainWindow::initGraphicsView()
+{
     // 图像视图初始化
     m_graphics_scene = new QGraphicsScene(this);
     m_graphics_view = new QGraphicsView(this);
     m_graphics_view->setScene(m_graphics_scene);
     // 添加view到布局
     m_grid_layout->addWidget(m_graphics_view,1,1);
-
-    m_current_scale = 1.0;
-}
-
-void MainWindow::initMenuBar() {
-    createMenuFromConfig();
+    // 设置视图属性
+    m_graphics_view->setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
+    m_graphics_view->setRenderHint(QPainter::SmoothPixmapTransform); // 光滑像素
+    // m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag); // 局部框选开启
+    m_graphics_view->setInteractive(true); // 开启交互
+    m_graphics_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse); // 设置锚点
+    // 设置场景背景
+    m_graphics_scene->setBackgroundBrush(QBrush(Qt::lightGray));
 }
 
 void MainWindow::loadMenuConfig() {
@@ -201,13 +219,60 @@ void MainWindow::onOpenFile() {
                                                         .arg(image.size().rwidth())
                                                         .arg(image.depth()));
 
-    // 显示、处理图像
-    m_graphics_scene->addPixmap(QPixmap::fromImage(image));
+    // 添加到场景
+    addImageToScene(image, path);
+}
 
-    // 保存为其他格式
-    // if (image.save("converted.png", "PNG")) {
-    //     qDebug() << "已保存为PNG格式";
-    // }
+// 将图片添加到场景
+void MainWindow::addImageToScene(const QImage& image, const QString& path)
+{
+    // 创建图片项
+    QGraphicsPixmapItem* pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(image));
+
+    // 设置图片属性
+    pixmapItem->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
+    pixmapItem->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
+    pixmapItem->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
+    pixmapItem->setAcceptHoverEvents(true); // 鼠标悬停事件
+
+    // 设置图片位置（在已存在图片基础上偏移）
+    int offset = m_image_items.size() * 20;  // 每次偏移20像素
+    pixmapItem->setPos(offset, offset);
+
+    // 添加到场景
+    m_graphics_scene->addItem(pixmapItem);
+
+    // 保存图片信息
+    ImageItem imgInfo;
+    imgInfo.pixmapItem = pixmapItem;
+    imgInfo.path = path;
+    imgInfo.offset = QPointF(offset, offset);
+    imgInfo.zValue = m_current_z_value++;
+
+    m_image_items[pixmapItem] = imgInfo;
+
+    // 选中新添加的图片
+    selectImageItem(pixmapItem);
+}
+
+void MainWindow::selectImageItem(QGraphicsPixmapItem* item)
+{
+    deselectAll();
+
+    item->setSelected(true);
+    m_selected_items.insert(item);
+
+    // 高亮显示选中项
+    item->setGraphicsEffect(new QGraphicsDropShadowEffect());
+}
+
+void MainWindow::deselectAll()
+{
+    for (QGraphicsPixmapItem* item : m_selected_items) {
+        item->setSelected(false);
+        item->setGraphicsEffect(nullptr);
+    }
+    m_selected_items.clear();
 }
 
 void MainWindow::onSaveFile(){};
@@ -220,12 +285,12 @@ void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
 void MainWindow::onZoomIn()
 {
-    m_current_scale*=1.2;
+    m_view_scale*=1.2;
     m_graphics_view->scale(1.2,1.2);
 }
 void MainWindow::onZoomOut()
 {
-    m_current_scale*=0.8;
+    m_view_scale*=0.8;
     m_graphics_view->scale(0.8,0.8);
 }
 void MainWindow::onCopy(){};
