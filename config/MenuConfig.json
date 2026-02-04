@@ -37,7 +37,7 @@
                     "shortcut": "Ctrl+S",
                     "standardKey": "Save",
                     "statusTip": "保存当前文件",
-                    "enabled": false,
+                    "enabled": true,
                     "slot": "onSaveFile"
                 },
                 {
@@ -138,6 +138,7 @@
                     "id": "action_insert_picture",
                     "text": "插入图片",
                     "icon": ":/icons/insertpicture.png",
+                    "shortcut": "Ctrl+I",
                     "statusTip": "选择一张图片添加到顶部",
                     "slot": "onInsertPicture"
                 },

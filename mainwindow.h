@@ -59,6 +59,8 @@ private:
     Ui::MainWindow *ui;
     void initMenuBar();
     void initGraphicsView();
+    void initButton();
+    void save(QString title);
     void loadMenuConfig();
     void createMenuFromConfig();
     void connectActionToSlot(const QString& actionId, QAction* action);

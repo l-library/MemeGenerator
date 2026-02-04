@@ -18,5 +18,7 @@
         <file>icons/insertpicture.png</file>
         <file>icons/inserttext.png</file>
         <file>icons/paste.png</file>
+        <file>icons/crossopen.png</file>
+        <file>icons/export.png</file>
     </qresource>
 </RCC>
