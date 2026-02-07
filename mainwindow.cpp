@@ -121,6 +121,17 @@ void MainWindow::initButton()
     });
     m_grid_layout->addWidget(insert_picture_btn,1,2);
 
+    // 插入文本按钮
+    QPushButton* insert_text_btn = new QPushButton(this);
+    insert_text_btn->setText("插入文本");
+    insert_text_btn->setStatusTip("插入一个文本框(Ctrl+T)");
+    insert_text_btn->setIcon(QIcon(":/icons/inserttext.png"));
+    insert_text_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(insert_text_btn, &QPushButton::pressed, [=]() {
+        onInsertText();
+    });
+    m_grid_layout->addWidget(insert_text_btn,2,2);
+
     // 导出按钮
     QPushButton* save_file_button = new QPushButton(this);
     save_file_button->setText("导出");
@@ -281,46 +292,41 @@ void MainWindow::onOpenFile() {
                                                         .arg(image.size().rheight())
                                                         .arg(image.size().rwidth())
                                                         .arg(image.depth()));
-
+    ResizableItem* pixmapItem = new ResizableItem;
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
     // 添加到场景
-    addImageToScene(image, path);
+    addItemToScene(pixmapItem);
 }
 
 // 将图片添加到场景
-void MainWindow::addImageToScene(const QImage& image, const QString& path)
+void MainWindow::addItemToScene(ResizableItem* item)
 {
-    // 创建图片项
-    ResizableItem* pixmapItem = new ResizableItem;
-    pixmapItem->setPixmap(QPixmap::fromImage(image));
-
-
-    // 设置图片属性
-    pixmapItem->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
-    pixmapItem->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
-    pixmapItem->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
-    pixmapItem->setAcceptHoverEvents(true); // 鼠标悬停事件
+    // 设置物品属性
+    item->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
+    item->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
+    item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
+    item->setAcceptHoverEvents(true); // 鼠标悬停事件
 
     // 设置图片位置（在已存在图片基础上偏移）
-    int offset = m_image_items.size() * 20;  // 每次偏移20像素
-    pixmapItem->setPos(offset, offset);
+    int offset = m_items.size() * 20;  // 每次偏移20像素
+    item->setPos(offset, offset);
 
     // 添加到场景
-    m_graphics_scene->addItem(pixmapItem);
+    m_graphics_scene->addItem(item);
 
-    // 保存图片信息
-    ImageItem imgInfo;
-    imgInfo.pixmapItem = pixmapItem;
-    imgInfo.path = path;
-    imgInfo.offset = QPointF(offset, offset);
-    imgInfo.zValue = m_current_z_value++;
+    // 保存物品信息
+    Item itemInfo;
+    itemInfo.pixmapItem = item;
+    itemInfo.offset = QPointF(offset, offset);
+    itemInfo.zValue = m_current_z_value++;
 
-    m_image_items[pixmapItem] = imgInfo;
+    m_items[item] = itemInfo;
 
     // 选中新添加的图片
-    selectImageItem(pixmapItem);
+    selectItem(item);
 }
 
-void MainWindow::selectImageItem(ResizableItem* item)
+void MainWindow::selectItem(ResizableItem* item)
 {
     deselectAll();
 
@@ -435,10 +441,17 @@ void MainWindow::onInsertPicture()
                                                          .arg(image.size().rwidth())
                                                          .arg(image.depth()));
 
+    ResizableItem* pixmapItem = new ResizableItem;
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
     // 添加到场景
-    addImageToScene(image, path);
+    addItemToScene(pixmapItem);
 }
-void MainWindow::onInsertText(){};
+void MainWindow::onInsertText()
+{
+    ResizableItem* text = new ResizableItem;
+    text->setText("请输入文本");
+    addItemToScene(text);
+}
 void MainWindow::onCutting(){};
 void MainWindow::onFilter(){};
 void MainWindow::onAbout()
