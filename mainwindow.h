@@ -10,7 +10,7 @@ struct MenuConfig;
 class QGridLayout;
 class QGraphicsView;
 class QGraphicsScene;
-class QGraphicsPixmapItem;
+class ResizableItem;
 
 namespace Ui {
 class MainWindow;
@@ -30,7 +30,7 @@ public:
 
     // 图片项数据结构
     struct ImageItem {
-        QGraphicsPixmapItem* pixmapItem;
+        ResizableItem* pixmapItem;
         QString path;
         QPointF offset;  // 相对于原始位置的偏移
         qreal zValue;    // z轴值，用于图层管理
@@ -66,7 +66,7 @@ private:
     void connectActionToSlot(const QString& actionId, QAction* action);
     void setupDefaultMenuConfig();
     void addImageToScene(const QImage& image, const QString& path);
-    void selectImageItem(QGraphicsPixmapItem* item);
+    void selectImageItem(ResizableItem* item);
     void deselectAll();
 
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
@@ -76,8 +76,8 @@ private:
     QGraphicsScene* m_graphics_scene;      // 视图
     QGraphicsView* m_graphics_view;        // 场景
     // 图片管理
-    QMap<QGraphicsPixmapItem*, ImageItem> m_image_items;  // 存储所有图片项
-    QSet<QGraphicsPixmapItem*> m_selected_items;          // 当前选中的图片项
+    QMap<ResizableItem*, ImageItem> m_image_items;  // 存储所有图片项
+    QSet<ResizableItem*> m_selected_items;          // 当前选中的图片项
     qreal m_current_z_value;                              // 当前z值计数器
     // 当前视图的整体
     double m_view_scale;

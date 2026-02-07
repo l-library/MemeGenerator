@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsDropShadowEffect>
+#include "resizableitem.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -58,7 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
         "   background-color: #F5F5F5;"      /* 背景色稍微改浅灰，与白色视图区分 */
         "}"
         "QStatusBar::item {"
-        "   border: none;"                   /* 去掉状态栏内部每个小格子的边框（可选） */
+        "   border: none;"                   /* 去掉状态栏内部每个小格子的边框*/
         "}"
         );
     ui->statusbar->showMessage("准备就绪");
@@ -289,7 +290,9 @@ void MainWindow::onOpenFile() {
 void MainWindow::addImageToScene(const QImage& image, const QString& path)
 {
     // 创建图片项
-    QGraphicsPixmapItem* pixmapItem = new QGraphicsPixmapItem(QPixmap::fromImage(image));
+    ResizableItem* pixmapItem = new ResizableItem;
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
+
 
     // 设置图片属性
     pixmapItem->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
@@ -317,7 +320,7 @@ void MainWindow::addImageToScene(const QImage& image, const QString& path)
     selectImageItem(pixmapItem);
 }
 
-void MainWindow::selectImageItem(QGraphicsPixmapItem* item)
+void MainWindow::selectImageItem(ResizableItem* item)
 {
     deselectAll();
 
@@ -330,7 +333,7 @@ void MainWindow::selectImageItem(QGraphicsPixmapItem* item)
 
 void MainWindow::deselectAll()
 {
-    for (QGraphicsPixmapItem* item : m_selected_items) {
+    for (ResizableItem* item : m_selected_items) {
         item->setSelected(false);
         // item->setGraphicsEffect(nullptr);
     }

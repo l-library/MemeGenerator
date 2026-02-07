@@ -11,11 +11,13 @@ CONFIG += c++17
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    menuconfig.cpp
+    menuconfig.cpp \
+    resizableitem.cpp
 
 HEADERS += \
     mainwindow.h \
-    menuconfig.h
+    menuconfig.h \
+    resizableitem.h
 
 FORMS += \
     mainwindow.ui
