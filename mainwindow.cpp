@@ -9,9 +9,19 @@
 #include <QDebug>
 #include <QPushButton>
 #include <ui_mainwindow.h>
+#include <QLabel>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QVBoxLayout>
+#include <QGraphicsPixmapItem>
+#include <QGraphicsDropShadowEffect>
+#include "resizableitem.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow),
+     m_grid_layout(nullptr),m_graphics_scene(nullptr)
+    , m_graphics_view(nullptr), m_current_z_value(0)
+    ,m_view_scale(1.0)
 {
     ui->setupUi(this);
 
@@ -24,20 +34,105 @@ MainWindow::MainWindow(QWidget *parent)
     // 菜单栏初始化
     initMenuBar();
 
-    auto button = new QPushButton("test", this);
-    button->move(0, 40);
+    // 创建网格布局
+    m_grid_layout= new QGridLayout(this);
+    // 设置行和列的比例
+    for(int i=0;i<10;++i){
+    m_grid_layout->setRowStretch(i, 10);  // 将行均分为10份
+    }
+    m_grid_layout->setColumnStretch(0, 20);  // 第一列占20%
+    m_grid_layout->setColumnStretch(1, 60);  // 第二列占60%
+    m_grid_layout->setColumnStretch(2, 20);  // 第三列占20%
+    m_grid_layout->setSpacing(0);
+    m_grid_layout->setContentsMargins(0, 0, 0, 0);
+    setCentralWidget(new QWidget(this));
+    centralWidget()->setContentsMargins(0, 0, 0, 0);
+    centralWidget()->setLayout(m_grid_layout);
 
-    connect(button, &QPushButton::clicked, this, [=]()
-            {
-            QDialog* dialog = new QDialog(this);
-        dialog->setWindowTitle(tr("Hello, dialog!"));
-            dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
-                });
+    // 初始化图像视图
+    initGraphicsView();
+
+    // 设置状态栏
+    this->statusBar()->setStyleSheet(
+        "QStatusBar {"
+        "   border-top: 1px solid #B0B0B0;"  /* 顶部添加 1px 的灰色实线 */
+        "   background-color: #F5F5F5;"      /* 背景色稍微改浅灰，与白色视图区分 */
+        "}"
+        "QStatusBar::item {"
+        "   border: none;"                   /* 去掉状态栏内部每个小格子的边框*/
+        "}"
+        );
+    ui->statusbar->showMessage("准备就绪");
+
+    // 初始化右侧按键
+    initButton();
 }
 
 void MainWindow::initMenuBar() {
     createMenuFromConfig();
+}
+
+void MainWindow::initGraphicsView()
+{
+    // 图像视图初始化
+    m_graphics_scene = new QGraphicsScene(this);
+    m_graphics_view = new QGraphicsView(this);
+    m_graphics_view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_graphics_view->setScene(m_graphics_scene);
+    // 添加view到布局
+    m_grid_layout->addWidget(m_graphics_view,0,0,10,2);
+    // 设置视图属性
+    m_graphics_view->setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
+    m_graphics_view->setRenderHint(QPainter::SmoothPixmapTransform); // 光滑像素
+    m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag); // 局部框选开启
+    m_graphics_view->setInteractive(true); // 开启交互
+    m_graphics_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse); // 设置锚点
+    // 设置场景背景
+    m_graphics_scene->setBackgroundBrush(QBrush(Qt::white));
+}
+
+void MainWindow::initButton()
+{
+    // 开启/关闭网格线按钮
+    QPushButton* cross_open_btn = new QPushButton(this);
+    cross_open_btn->setText("开启网格线");
+    cross_open_btn->setStatusTip("开启网格线(Ctrl+Shift+C)");
+    cross_open_btn->setIcon(QIcon(":/icons/crossopen.png"));
+    cross_open_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    cross_open_btn->setCheckable(true);
+    connect(cross_open_btn, &QPushButton::toggled, [=](bool on) {
+        if (on) {
+            m_graphics_scene->setBackgroundBrush(QBrush(Qt::lightGray,Qt::CrossPattern));
+        } else {
+            m_graphics_scene->setBackgroundBrush(QBrush(Qt::white));
+        }
+    });
+    cross_open_btn->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    m_grid_layout->addWidget(cross_open_btn,0,2);
+
+    // 插入图片按钮
+    QPushButton* insert_picture_btn = new QPushButton(this);
+    insert_picture_btn->setText("插入图片");
+    insert_picture_btn->setStatusTip("从文件中选择图片插入(Ctrl+I)");
+    insert_picture_btn->setIcon(QIcon(":/icons/insertpicture.png"));
+    insert_picture_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(insert_picture_btn, &QPushButton::pressed, [=]() {
+        onInsertPicture();
+    });
+    m_grid_layout->addWidget(insert_picture_btn,1,2);
+
+    // 导出按钮
+    QPushButton* save_file_button = new QPushButton(this);
+    save_file_button->setText("导出");
+    save_file_button->setStatusTip("将当前视图导出为图片(Ctrl+S)");
+    save_file_button->setIcon(QIcon(":/icons/export.png"));
+    save_file_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(save_file_button, &QPushButton::pressed, [=]() {
+        onSaveAsFile();
+    });
+    // 设置按钮的文字颜色和背景色
+    save_file_button->setStyleSheet("color: black; background-color: #FFFD55;");
+    m_grid_layout->addWidget(save_file_button,8,2,10,2);
 }
 
 void MainWindow::loadMenuConfig() {
@@ -187,37 +282,170 @@ void MainWindow::onOpenFile() {
                                                         .arg(image.size().rwidth())
                                                         .arg(image.depth()));
 
-    // 显示、处理图像
-    // 在QLabel中显示
-    // QLabel *label = new QLabel;
-    // label->setPixmap(QPixmap::fromImage(image));
-
-    // 保存为其他格式
-    // if (image.save("converted.png", "PNG")) {
-    //     qDebug() << "已保存为PNG格式";
-    // }
+    // 添加到场景
+    addImageToScene(image, path);
 }
 
-void MainWindow::onSaveFile(){};
-void MainWindow::onSaveAsFile(){};
+// 将图片添加到场景
+void MainWindow::addImageToScene(const QImage& image, const QString& path)
+{
+    // 创建图片项
+    ResizableItem* pixmapItem = new ResizableItem;
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
+
+
+    // 设置图片属性
+    pixmapItem->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
+    pixmapItem->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
+    pixmapItem->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
+    pixmapItem->setAcceptHoverEvents(true); // 鼠标悬停事件
+
+    // 设置图片位置（在已存在图片基础上偏移）
+    int offset = m_image_items.size() * 20;  // 每次偏移20像素
+    pixmapItem->setPos(offset, offset);
+
+    // 添加到场景
+    m_graphics_scene->addItem(pixmapItem);
+
+    // 保存图片信息
+    ImageItem imgInfo;
+    imgInfo.pixmapItem = pixmapItem;
+    imgInfo.path = path;
+    imgInfo.offset = QPointF(offset, offset);
+    imgInfo.zValue = m_current_z_value++;
+
+    m_image_items[pixmapItem] = imgInfo;
+
+    // 选中新添加的图片
+    selectImageItem(pixmapItem);
+}
+
+void MainWindow::selectImageItem(ResizableItem* item)
+{
+    deselectAll();
+
+    item->setSelected(true);
+    m_selected_items.insert(item);
+
+    // 高亮显示选中项
+    // item->setGraphicsEffect(new QGraphicsDropShadowEffect());
+}
+
+void MainWindow::deselectAll()
+{
+    for (ResizableItem* item : m_selected_items) {
+        item->setSelected(false);
+        // item->setGraphicsEffect(nullptr);
+    }
+    m_selected_items.clear();
+}
+
+void MainWindow::onSaveFile()
+{
+    save("保存");
+}
+
+void MainWindow::onSaveAsFile()
+{
+    save("另存为");
+}
+
+void MainWindow::save(QString title)
+{
+    // 临时保存背景并移除
+    QBrush oldBackground = m_graphics_scene->backgroundBrush();
+    m_graphics_scene->setBackgroundBrush(Qt::NoBrush);
+
+    // 获取场景的边界矩形
+    QRectF rect = m_graphics_scene->sceneRect();
+
+    // 创建QImage
+    QImage image(rect.size().toSize(), QImage::Format_ARGB32);
+    image.fill(Qt::transparent);  // 设置透明背景
+
+    // 创建QPainter并渲染场景
+    QPainter painter(&image);
+    m_graphics_scene->render(&painter);
+    painter.end();
+
+    // 恢复背景
+    m_graphics_scene->setBackgroundBrush(oldBackground);
+
+    // 创建格式过滤器
+    QString filter = "JPEG (*.jpg *.jpeg);;";
+    filter += "PNG (*.png);;"
+              "BMP (*.bmp);;"
+              "GIF (*.gif);;"
+              "TIFF (*.tif *.tiff);;"
+              "所有文件 (*.*)";
+    // 保存
+    QString path = QFileDialog::getSaveFileName(this,title,"/untitled",filter);
+    if (!path.isEmpty()) {
+        image.save(path);
+    }
+};
 void MainWindow::onExit()
 {
     this->close();
 }
 void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
-void MainWindow::onZoomIn(){};
-void MainWindow::onZoomOut(){};
+void MainWindow::onZoomIn()
+{
+    m_view_scale*=1.2;
+    m_graphics_view->scale(1.2,1.2);
+}
+void MainWindow::onZoomOut()
+{
+    m_view_scale*=0.8;
+    m_graphics_view->scale(0.8,0.8);
+}
 void MainWindow::onCopy(){};
 void MainWindow::onPaste(){};
-void MainWindow::onInsertPicture(){};
+void MainWindow::onInsertPicture()
+{
+    // 创建格式过滤器
+    QString filter = "图片 (";
+    QList<QByteArray> formats = QImageReader::supportedImageFormats();
+    for (int i = 0; i < formats.size(); ++i) {
+        filter += "*." + QString(formats[i]) + " ";
+    }
+    filter += ");;";
+
+    // 常用图片格式过滤器
+    filter += "JPEG (*.jpg *.jpeg);;"
+              "PNG (*.png);;"
+              "BMP (*.bmp);;"
+              "GIF (*.gif);;"
+              "TIFF (*.tif *.tiff);;"
+              "所有文件 (*.*)";
+    QString path = QFileDialog::getOpenFileName(this,"选择要插入的图片",".",filter);
+    if(path.isEmpty()||!QFile::exists(path)){
+        QMessageBox::warning(this,"warning",QString("文件打开失败！"));
+        return;
+    }
+    QImage image;
+    if(!image.load(path))
+    {
+        QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
+        return;
+    }
+    QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
+                                                         .arg(image.size().rheight())
+                                                         .arg(image.size().rwidth())
+                                                         .arg(image.depth()));
+
+    // 添加到场景
+    addImageToScene(image, path);
+}
 void MainWindow::onInsertText(){};
 void MainWindow::onCutting(){};
 void MainWindow::onFilter(){};
 void MainWindow::onAbout()
 {
-    QString message = "表情包制作器 V1.0\n项目地址：XXXXXXXXXXXXXXXXXX";
-    QMessageBox::about(this,"关于",message);
+    QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v1.0</h3>"
+            "<p>开发者：@l-library</p>"
+            "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
 
 // 备用默认配置
