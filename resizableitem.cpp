@@ -13,7 +13,7 @@ const int HANDLE_SIZE = 8;
 const int MIN_SIZE = 20; // 最小尺寸
 
 ResizableItem::ResizableItem(QGraphicsItem *parent)
-    : QGraphicsItem(parent), m_type(Type_Text), m_rect(0, 0, 100, 100), m_handleSelected(Handle_None)
+    : QGraphicsObject (parent), m_type(Type_Text), m_rect(0, 0, 100, 100), m_handleSelected(Handle_None)
 {
     // 允许选中和移动
     setFlags(ItemIsSelectable | ItemIsMovable | ItemSendsGeometryChanges);
@@ -124,6 +124,19 @@ void ResizableItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     m_handleSelected = Handle_None;
     setCursor(Qt::ArrowCursor);
     QGraphicsItem::mouseReleaseEvent(event);
+}
+
+// 双击事件实现
+void ResizableItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        // 发送信号
+        emit itemDoubleClicked(this);
+
+        event->accept();
+    } else {
+        QGraphicsObject::mouseDoubleClickEvent(event); // 注意调用的是 QGraphicsObject
+    }
 }
 
 void ResizableItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)

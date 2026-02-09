@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsDropShadowEffect>
+#include <QInputDialog>
 #include "resizableitem.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -256,12 +257,8 @@ void MainWindow::connectActionToSlot(const QString& slotName, QAction* action) {
     }
 }
 
-// 槽函数实现
-void MainWindow::onNewFile() {
-    QMessageBox::information(this, "新建文件", "新建文件功能");
-}
-
-void MainWindow::onOpenFile() {
+QImage* MainWindow::getImageFromFile(QString title)
+{
     // 创建格式过滤器
     QString filter = "图片 (";
     QList<QByteArray> formats = QImageReader::supportedImageFormats();
@@ -277,23 +274,33 @@ void MainWindow::onOpenFile() {
               "GIF (*.gif);;"
               "TIFF (*.tif *.tiff);;"
               "所有文件 (*.*)";
-    QString path = QFileDialog::getOpenFileName(this,"选择打开的文件",".",filter);
+    QString path = QFileDialog::getOpenFileName(this,title,".",filter);
     if(path.isEmpty()||!QFile::exists(path)){
         QMessageBox::warning(this,"warning",QString("文件打开失败！"));
-        return;
+        return nullptr;
     }
-    QImage image;
-    if(!image.load(path))
+    QImage* image = new QImage;
+    if(!image->load(path))
     {
         QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
-        return;
+        return nullptr;
     }
     QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
-                                                        .arg(image.size().rheight())
-                                                        .arg(image.size().rwidth())
-                                                        .arg(image.depth()));
+                                                         .arg(image->size().rheight())
+                                                         .arg(image->size().rwidth())
+                                                         .arg(image->depth()));
+    return image;
+}
+
+// 槽函数实现
+void MainWindow::onNewFile() {
+    QMessageBox::information(this, "新建文件", "新建文件功能");
+}
+
+void MainWindow::onOpenFile() {
+    auto image = getImageFromFile("选择要打开的文件");
     ResizableItem* pixmapItem = new ResizableItem;
-    pixmapItem->setPixmap(QPixmap::fromImage(image));
+    pixmapItem->setPixmap(QPixmap::fromImage(*image));
     // 添加到场景
     addItemToScene(pixmapItem);
 }
@@ -307,7 +314,7 @@ void MainWindow::addItemToScene(ResizableItem* item)
     item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
     item->setAcceptHoverEvents(true); // 鼠标悬停事件
 
-    // 设置图片位置（在已存在图片基础上偏移）
+    // 设置位置（在已存在item的基础上偏移）
     int offset = m_items.size() * 20;  // 每次偏移20像素
     item->setPos(offset, offset);
 
@@ -322,7 +329,27 @@ void MainWindow::addItemToScene(ResizableItem* item)
 
     m_items[item] = itemInfo;
 
-    // 选中新添加的图片
+    // 连接信号槽（图片双击事件）
+    connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
+        if(target->getItemType()==ItemType::Type_Image){
+            auto image = getImageFromFile("选择要更换的图片");
+            target->setPixmap(QPixmap::fromImage(*image));
+        }
+        else{
+            bool ok;
+            // 弹出标准输入对话框
+            QString newText = QInputDialog::getText(this, "编辑文本",
+                                                    "请输入新内容:",
+                                                    QLineEdit::Normal,
+                                                    target->getText(), &ok);
+            if (ok && !newText.isEmpty()) {
+                target->setText(newText);
+            }
+        }
+        }
+    );
+
+    // 选中新添加的物品
     selectItem(item);
 }
 
@@ -410,46 +437,16 @@ void MainWindow::onCopy(){};
 void MainWindow::onPaste(){};
 void MainWindow::onInsertPicture()
 {
-    // 创建格式过滤器
-    QString filter = "图片 (";
-    QList<QByteArray> formats = QImageReader::supportedImageFormats();
-    for (int i = 0; i < formats.size(); ++i) {
-        filter += "*." + QString(formats[i]) + " ";
-    }
-    filter += ");;";
-
-    // 常用图片格式过滤器
-    filter += "JPEG (*.jpg *.jpeg);;"
-              "PNG (*.png);;"
-              "BMP (*.bmp);;"
-              "GIF (*.gif);;"
-              "TIFF (*.tif *.tiff);;"
-              "所有文件 (*.*)";
-    QString path = QFileDialog::getOpenFileName(this,"选择要插入的图片",".",filter);
-    if(path.isEmpty()||!QFile::exists(path)){
-        QMessageBox::warning(this,"warning",QString("文件打开失败！"));
-        return;
-    }
-    QImage image;
-    if(!image.load(path))
-    {
-        QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
-        return;
-    }
-    QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
-                                                         .arg(image.size().rheight())
-                                                         .arg(image.size().rwidth())
-                                                         .arg(image.depth()));
-
+    auto image = getImageFromFile("选择要插入的图片");
     ResizableItem* pixmapItem = new ResizableItem;
-    pixmapItem->setPixmap(QPixmap::fromImage(image));
+    pixmapItem->setPixmap(QPixmap::fromImage(*image));
     // 添加到场景
     addItemToScene(pixmapItem);
 }
 void MainWindow::onInsertText()
 {
     ResizableItem* text = new ResizableItem;
-    text->setText("请输入文本");
+    text->setText("双击以输入文本");
     addItemToScene(text);
 }
 void MainWindow::onCutting(){};

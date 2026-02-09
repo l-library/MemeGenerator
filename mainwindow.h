@@ -67,6 +67,7 @@ private:
     void addItemToScene(ResizableItem* item);
     void selectItem(ResizableItem* item);
     void deselectAll();
+    QImage* getImageFromFile(QString title);
 
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
