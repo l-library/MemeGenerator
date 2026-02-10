@@ -299,6 +299,8 @@ void MainWindow::onNewFile() {
 
 void MainWindow::onOpenFile() {
     auto image = getImageFromFile("选择要打开的文件");
+    if(!image)
+        return;
     ResizableItem* pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(*image));
     // 添加到场景
@@ -308,6 +310,8 @@ void MainWindow::onOpenFile() {
 // 将图片添加到场景
 void MainWindow::addItemToScene(ResizableItem* item)
 {
+    if(!item)
+        return;
     // 设置物品属性
     item->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
     item->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
@@ -349,6 +353,21 @@ void MainWindow::addItemToScene(ResizableItem* item)
         }
     );
 
+    // 连接删除请求信号
+    connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target){
+        // 从选中集合中移除
+        m_selected_items.remove(target);
+
+        // 从物品映射中移除
+        m_items.remove(target);
+
+        // 从场景中移除
+        m_graphics_scene->removeItem(target);
+
+        // 删除对象
+        delete target;
+    });
+
     // 选中新添加的物品
     selectItem(item);
 }
@@ -389,16 +408,19 @@ void MainWindow::save(QString title)
     QBrush oldBackground = m_graphics_scene->backgroundBrush();
     m_graphics_scene->setBackgroundBrush(Qt::NoBrush);
 
-    // 获取场景的边界矩形
-    QRectF rect = m_graphics_scene->sceneRect();
+    // 获取当前视口的可见区域（在场景坐标系中）
+    QRectF visibleRect = m_graphics_view->mapToScene(
+                                            m_graphics_view->viewport()->rect()).boundingRect();
 
-    // 创建QImage
-    QImage image(rect.size().toSize(), QImage::Format_ARGB32);
+    // 创建QImage（使用可见区域的大小）
+    QImage image(visibleRect.size().toSize(), QImage::Format_ARGB32);
     image.fill(Qt::transparent);  // 设置透明背景
 
-    // 创建QPainter并渲染场景
+    // 创建QPainter并渲染可见区域
     QPainter painter(&image);
-    m_graphics_scene->render(&painter);
+    m_graphics_scene->render(&painter,
+                             QRectF(),  // 目标矩形（整个image）
+                             visibleRect);  // 源矩形（只渲染可见区域）
     painter.end();
 
     // 恢复背景
@@ -411,12 +433,13 @@ void MainWindow::save(QString title)
               "GIF (*.gif);;"
               "TIFF (*.tif *.tiff);;"
               "所有文件 (*.*)";
+
     // 保存
-    QString path = QFileDialog::getSaveFileName(this,title,"/untitled",filter);
+    QString path = QFileDialog::getSaveFileName(this, title, "/untitled", filter);
     if (!path.isEmpty()) {
         image.save(path);
     }
-};
+}
 void MainWindow::onExit()
 {
     this->close();
@@ -438,6 +461,8 @@ void MainWindow::onPaste(){};
 void MainWindow::onInsertPicture()
 {
     auto image = getImageFromFile("选择要插入的图片");
+    if(!image)
+        return;
     ResizableItem* pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(*image));
     // 添加到场景

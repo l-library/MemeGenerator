@@ -43,9 +43,16 @@ public:
     // 获得当前文本内容
     QString getText(){return m_text; }
 
+    // 设置文本背景颜色（仅对文本类型有效）
+    void setTextBackgroundColor(const QColor &color);
+    // 设置文本颜色（仅对文本类型有效）
+    void setTextColor(const QColor &color);
+
 signals:
     // 双击信号
     void itemDoubleClicked(ResizableItem *item);
+    // 删除请求信号
+    void itemDeleteRequested(ResizableItem *item);
 
 
 protected:
@@ -63,12 +70,17 @@ protected:
 
     // 双击事件声明
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    // 右键菜单事件
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
 private:
     ItemType m_type;
     QRectF m_rect;
     QString m_text;
     QPixmap m_pixmap;
+    QColor m_textBackgroundColor;  // 文本背景颜色
+    QColor m_textColor;            // 文本颜色
+    mutable qreal m_currentScale;  // 当前视图缩放因子，用于固定手柄大小
 
     HandlePosition m_handleSelected;
 
