@@ -146,6 +146,7 @@
                     "id": "action_insert_text",
                     "text": "插入文本",
                     "icon": ":/icons/inserttext.png",
+                    "shortcut": "Ctrl+T",
                     "statusTip": "创建一个文本框用于输入文本",
                     "slot": "onInsertText"
                 }

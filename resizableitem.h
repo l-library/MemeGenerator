@@ -10,17 +10,20 @@ enum HandlePosition {
     Handle_Left, Handle_Right,
     Handle_BottomLeft, Handle_Bottom, Handle_BottomRight
 };
+// 物品类型枚举
+enum ItemType {
+    Type_Image,
+    Type_Text
+};
 
-class ResizableItem : public QGraphicsItem
+class ResizableItem : public QGraphicsObject
 {
-public:
-    enum ItemType {
-        Type_Image,
-        Type_Text
-    };
 
+    Q_OBJECT
+
+public:
     // 构造函数
-    ResizableItem(QGraphicsItem *parent = nullptr);
+    explicit ResizableItem(QGraphicsItem *parent = nullptr);
 
     // 设置为图片模式
     void setPixmap(const QPixmap &pixmap);
@@ -33,6 +36,24 @@ public:
 
     // 核心绘制逻辑
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    // 获得当前物品的类型
+    ItemType getItemType(){return m_type; }
+
+    // 获得当前文本内容
+    QString getText(){return m_text; }
+
+    // 设置文本背景颜色（仅对文本类型有效）
+    void setTextBackgroundColor(const QColor &color);
+    // 设置文本颜色（仅对文本类型有效）
+    void setTextColor(const QColor &color);
+
+signals:
+    // 双击信号
+    void itemDoubleClicked(ResizableItem *item);
+    // 删除请求信号
+    void itemDeleteRequested(ResizableItem *item);
+
 
 protected:
     // 鼠标悬停
@@ -47,11 +68,19 @@ protected:
     // 鼠标释放：重置状态
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
+    // 双击事件声明
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    // 右键菜单事件
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+
 private:
     ItemType m_type;
     QRectF m_rect;
     QString m_text;
     QPixmap m_pixmap;
+    QColor m_textBackgroundColor;  // 文本背景颜色
+    QColor m_textColor;            // 文本颜色
+    mutable qreal m_currentScale;  // 当前视图缩放因子，用于固定手柄大小
 
     HandlePosition m_handleSelected;
 
