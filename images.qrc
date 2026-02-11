@@ -21,5 +21,7 @@
         <file>icons/crossopen.png</file>
         <file>icons/export.png</file>
         <file>icons/canvas.png</file>
+        <file>icons/canvassize.png</file>
+        <file>icons/reset.png</file>
     </qresource>
 </RCC>

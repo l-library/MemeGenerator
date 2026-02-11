@@ -64,7 +64,8 @@ signals:
     void itemDoubleClicked(ResizableItem *item);
     // 删除请求信号
     void itemDeleteRequested(ResizableItem *item);
-
+    // 大小变化信号
+    void sizeChanged(ResizableItem *item);
 
 protected:
     // 鼠标悬停

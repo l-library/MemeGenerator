@@ -11,6 +11,7 @@ class QGridLayout;
 class QGraphicsView;
 class QGraphicsScene;
 class ResizableItem;
+class QLabel;
 
 namespace Ui {
 class MainWindow;
@@ -59,6 +60,7 @@ private slots:
     void onCanvasDoubleClicked(ResizableItem* canvas);
     void onSetCanvasSize();
     void onResetCanvas();
+    void onUpdateCanvasSizeLabel();          // 更新状态栏信息
 
 private:
     // 编辑模式枚举
@@ -91,6 +93,7 @@ private:
 
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
+    QLabel* m_canvasSizeLabel;             // 状态栏显示当前画布大小
     // 图形界面
     QGridLayout* m_grid_layout;            // 网格布局
     QGraphicsScene* m_graphics_scene;      // 视图

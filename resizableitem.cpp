@@ -348,6 +348,9 @@ void ResizableItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         // 设置 Item 在场景中的新位置
         setPos(newPos);
 
+        // 发送大小变化信号
+        emit sizeChanged(this);
+
     } else {
         QGraphicsItem::mouseMoveEvent(event);
     }

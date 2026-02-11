@@ -26,6 +26,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // 默认窗口最大化
+    this->setWindowState(Qt::WindowMaximized);
+
     // 图标和名称初始化
     this->setWindowIcon(QIcon(":/icons/MemeGenerator.png"));
     this->setWindowTitle("表情包生成器");
@@ -59,11 +62,14 @@ MainWindow::MainWindow(QWidget *parent)
         "   border-top: 1px solid #B0B0B0;"  /* 顶部添加 1px 的灰色实线 */
         "   background-color: #F5F5F5;"      /* 背景色稍微改浅灰，与白色视图区分 */
         "}"
-        "QStatusBar::item {"
-        "   border: none;"                   /* 去掉状态栏内部每个小格子的边框*/
-        "}"
         );
-    ui->statusbar->showMessage("准备就绪");
+    statusBar()->showMessage("准备就绪");
+    // 画布大小状态显示
+    QSizeF size = m_canvasItem->boundingRect().size();
+    QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
+    m_canvasSizeLabel = new QLabel(message,this);
+    // 将初始化的标签添加到底部状态栏上
+    statusBar()->addPermanentWidget(m_canvasSizeLabel);
 
     // 初始化右侧按键
     initButton();
@@ -98,23 +104,6 @@ void MainWindow::initGraphicsView()
 
 void MainWindow::initButton()
 {
-    // 开启/关闭网格线按钮
-    QPushButton* cross_open_btn = new QPushButton(this);
-    cross_open_btn->setText("开启网格线");
-    cross_open_btn->setStatusTip("开启网格线(Ctrl+Shift+C)");
-    cross_open_btn->setIcon(QIcon(":/icons/crossopen.png"));
-    cross_open_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    cross_open_btn->setCheckable(true);
-    connect(cross_open_btn, &QPushButton::toggled, [=](bool on) {
-        if (on) {
-            m_graphics_scene->setBackgroundBrush(QBrush(Qt::lightGray,Qt::CrossPattern));
-        } else {
-            m_graphics_scene->setBackgroundBrush(QBrush(Qt::white));
-        }
-    });
-    cross_open_btn->setShortcut(QKeySequence("Ctrl+Shift+C"));
-    m_grid_layout->addWidget(cross_open_btn,0,2);
-
     // 画布编辑模式切换按钮
     QPushButton* canvasEditButton = new QPushButton(this);
     canvasEditButton->setText("画布编辑");
@@ -127,7 +116,7 @@ void MainWindow::initButton()
         setEditMode(checked ? CanvasEditMode : NormalMode);
     });
     canvasEditButton->setShortcut(QKeySequence("Ctrl+E"));
-    m_grid_layout->addWidget(canvasEditButton,1,2);
+    m_grid_layout->addWidget(canvasEditButton,0,2);
 
     // 插入图片按钮
     QPushButton* insert_picture_btn = new QPushButton(this);
@@ -138,7 +127,7 @@ void MainWindow::initButton()
     connect(insert_picture_btn, &QPushButton::pressed, [=]() {
         onInsertPicture();
     });
-    m_grid_layout->addWidget(insert_picture_btn,2,2);
+    m_grid_layout->addWidget(insert_picture_btn,1,2);
 
     // 插入文本按钮
     QPushButton* insert_text_btn = new QPushButton(this);
@@ -149,7 +138,7 @@ void MainWindow::initButton()
     connect(insert_text_btn, &QPushButton::pressed, [=]() {
         onInsertText();
     });
-    m_grid_layout->addWidget(insert_text_btn,3,2);
+    m_grid_layout->addWidget(insert_text_btn,2,2);
 
     // 导出按钮
     QPushButton* save_file_button = new QPushButton(this);
@@ -635,6 +624,8 @@ void MainWindow::createDefaultCanvas() {
     // 连接画布信号
     connect(m_canvasItem, &ResizableItem::itemDoubleClicked,
             this, &MainWindow::onCanvasDoubleClicked);
+    connect(m_canvasItem, &ResizableItem::sizeChanged,
+            this, &MainWindow::onUpdateCanvasSizeLabel);
 }
 
 void MainWindow::setEditMode(EditMode mode) {
@@ -743,6 +734,12 @@ void MainWindow::onResetCanvas() {
     }
 }
 
+void MainWindow::onUpdateCanvasSizeLabel()
+{
+    QSizeF size = m_canvasItem->boundingRect().size();
+    QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
+    m_canvasSizeLabel->setText(message);
+}
 
 MainWindow::~MainWindow()
 {
