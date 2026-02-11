@@ -20,5 +20,6 @@
         <file>icons/paste.png</file>
         <file>icons/crossopen.png</file>
         <file>icons/export.png</file>
+        <file>icons/canvas.png</file>
     </qresource>
 </RCC>

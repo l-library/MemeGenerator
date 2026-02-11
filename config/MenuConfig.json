@@ -162,6 +162,32 @@
                     "icon": ":/icons/cutting.png",
                     "statusTip": "裁剪当前图片",
                     "slot": "onCutting"
+                },
+                {
+                    "id": "action_canvas_edit",
+                    "text": "画布编辑模式",
+                    "icon": ":/icons/crossopen.png",
+                    "shortcut": "Ctrl+E",
+                    "statusTip": "切换画布编辑模式",
+                    "checkable": true,
+                    "checked": false,
+                    "slot": "onToggleCanvasEditMode"
+                },
+                {
+                    "id": "action_canvas_size",
+                    "text": "设置画布大小",
+                    "icon": ":/icons/zoomin.png",
+                    "shortcut": "Ctrl+Shift+A",
+                    "statusTip": "设置画布尺寸",
+                    "slot": "onSetCanvasSize"
+                },
+                {
+                    "id": "action_canvas_reset",
+                    "text": "重置画布",
+                    "icon": ":/icons/redo.png",
+                    "shortcut": "Ctrl+R",
+                    "statusTip": "重置画布到默认大小",
+                    "slot": "onResetCanvas"
                 }
             ]
         },

@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
      m_grid_layout(nullptr),m_graphics_scene(nullptr)
     , m_graphics_view(nullptr), m_current_z_value(0)
-    ,m_view_scale(1.0)
+    ,m_view_scale(1.0), m_editMode(NormalMode), m_canvasItem(nullptr)
 {
     ui->setupUi(this);
 
@@ -88,8 +88,12 @@ void MainWindow::initGraphicsView()
     m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag); // 局部框选开启
     m_graphics_view->setInteractive(true); // 开启交互
     m_graphics_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse); // 设置锚点
+    m_graphics_view->setBackgroundBrush(QBrush(Qt::lightGray));
     // 设置场景背景
-    m_graphics_scene->setBackgroundBrush(QBrush(Qt::white));
+    // m_graphics_scene->setForegroundBrush(QBrush(Qt::white));
+
+    // 创建默认画布
+    createDefaultCanvas();
 }
 
 void MainWindow::initButton()
@@ -111,6 +115,20 @@ void MainWindow::initButton()
     cross_open_btn->setShortcut(QKeySequence("Ctrl+Shift+C"));
     m_grid_layout->addWidget(cross_open_btn,0,2);
 
+    // 画布编辑模式切换按钮
+    QPushButton* canvasEditButton = new QPushButton(this);
+    canvasEditButton->setText("画布编辑");
+    canvasEditButton->setStatusTip("切换画布编辑模式 (Ctrl+E)");
+    canvasEditButton->setIcon(QIcon(":/icons/canvas.png"));
+    canvasEditButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    canvasEditButton->setCheckable(true);
+    canvasEditButton->setChecked(false);
+    connect(canvasEditButton, &QPushButton::toggled, [this](bool checked) {
+        setEditMode(checked ? CanvasEditMode : NormalMode);
+    });
+    canvasEditButton->setShortcut(QKeySequence("Ctrl+E"));
+    m_grid_layout->addWidget(canvasEditButton,1,2);
+
     // 插入图片按钮
     QPushButton* insert_picture_btn = new QPushButton(this);
     insert_picture_btn->setText("插入图片");
@@ -120,7 +138,7 @@ void MainWindow::initButton()
     connect(insert_picture_btn, &QPushButton::pressed, [=]() {
         onInsertPicture();
     });
-    m_grid_layout->addWidget(insert_picture_btn,1,2);
+    m_grid_layout->addWidget(insert_picture_btn,2,2);
 
     // 插入文本按钮
     QPushButton* insert_text_btn = new QPushButton(this);
@@ -131,7 +149,7 @@ void MainWindow::initButton()
     connect(insert_text_btn, &QPushButton::pressed, [=]() {
         onInsertText();
     });
-    m_grid_layout->addWidget(insert_text_btn,2,2);
+    m_grid_layout->addWidget(insert_text_btn,3,2);
 
     // 导出按钮
     QPushButton* save_file_button = new QPushButton(this);
@@ -254,6 +272,12 @@ void MainWindow::connectActionToSlot(const QString& slotName, QAction* action) {
         connect(action, &QAction::triggered, this, &MainWindow::onFilter);
     }else if (slotName == "onAbout") {
         connect(action, &QAction::triggered, this, &MainWindow::onAbout);
+    }else if (slotName == "onToggleCanvasEditMode") {
+        connect(action, &QAction::triggered, this, &MainWindow::onToggleCanvasEditMode);
+    }else if (slotName == "onSetCanvasSize") {
+        connect(action, &QAction::triggered, this, &MainWindow::onSetCanvasSize);
+    }else if (slotName == "onResetCanvas") {
+        connect(action, &QAction::triggered, this, &MainWindow::onResetCanvas);
     }
 }
 
@@ -294,7 +318,29 @@ QImage* MainWindow::getImageFromFile(QString title)
 
 // 槽函数实现
 void MainWindow::onNewFile() {
-    QMessageBox::information(this, "新建文件", "新建文件功能");
+    // 清空现有项目
+    for (auto it = m_items.begin(); it != m_items.end(); ++it) {
+        ResizableItem* item = it.key();
+        if (item != m_canvasItem) {
+            m_graphics_scene->removeItem(item);
+            delete item;
+        }
+    }
+    m_items.clear();
+    m_selected_items.clear();
+    m_current_z_value = 0;
+
+    // 重置画布到默认状态
+    if (m_canvasItem) {
+        onResetCanvas();
+    } else {
+        createDefaultCanvas();
+    }
+
+    // 重置编辑模式
+    setEditMode(NormalMode);
+
+    ui->statusbar->showMessage("新建文件完成");
 }
 
 void MainWindow::onOpenFile() {
@@ -312,9 +358,28 @@ void MainWindow::addItemToScene(ResizableItem* item)
 {
     if(!item)
         return;
-    // 设置物品属性
-    item->setFlag(QGraphicsItem::ItemIsMovable, true); // 可移动
-    item->setFlag(QGraphicsItem::ItemIsSelectable, true); // 可选
+
+    // 如果是画布，特殊处理
+    if (item->isCanvas()) {
+        m_canvasItem = item;
+        item->setZValue(-1000);  // 确保在底层
+
+        // 根据当前编辑模式设置画布属性
+        bool canvasEditable = (m_editMode == CanvasEditMode);
+        item->setFlag(QGraphicsItem::ItemIsMovable, canvasEditable);
+        item->setFlag(QGraphicsItem::ItemIsSelectable, canvasEditable);
+    } else {
+        // 根据当前编辑模式设置项目属性
+        if (m_editMode == CanvasEditMode) {
+            // 非画布项目在画布编辑模式下不可编辑
+            item->setFlag(QGraphicsItem::ItemIsMovable, false);
+            item->setFlag(QGraphicsItem::ItemIsSelectable, false);
+        } else {
+            item->setFlag(QGraphicsItem::ItemIsMovable, true);
+            item->setFlag(QGraphicsItem::ItemIsSelectable, true);
+        }
+    }
+
     item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
     item->setAcceptHoverEvents(true); // 鼠标悬停事件
 
@@ -325,55 +390,64 @@ void MainWindow::addItemToScene(ResizableItem* item)
     // 添加到场景
     m_graphics_scene->addItem(item);
 
-    // 保存物品信息
-    Item itemInfo;
-    itemInfo.pixmapItem = item;
-    itemInfo.offset = QPointF(offset, offset);
-    itemInfo.zValue = m_current_z_value++;
+    // 如果不是画布，保存物品信息到映射表
+    if (!item->isCanvas()) {
+        Item itemInfo;
+        itemInfo.pixmapItem = item;
+        itemInfo.offset = QPointF(offset, offset);
+        itemInfo.zValue = m_current_z_value++;
+        m_items[item] = itemInfo;
 
-    m_items[item] = itemInfo;
-
-    // 连接信号槽（图片双击事件）
-    connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
-        if(target->getItemType()==ItemType::Type_Image){
-            auto image = getImageFromFile("选择要更换的图片");
-            target->setPixmap(QPixmap::fromImage(*image));
-        }
-        else{
-            bool ok;
-            // 弹出标准输入对话框
-            QString newText = QInputDialog::getText(this, "编辑文本",
-                                                    "请输入新内容:",
-                                                    QLineEdit::Normal,
-                                                    target->getText(), &ok);
-            if (ok && !newText.isEmpty()) {
-                target->setText(newText);
+        // 连接信号槽（图片双击事件）
+        connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
+            if(target->getItemType()==ItemType::Type_Image){
+                auto image = getImageFromFile("选择要更换的图片");
+                target->setPixmap(QPixmap::fromImage(*image));
             }
-        }
-        }
-    );
+            else{
+                bool ok;
+                // 弹出标准输入对话框
+                QString newText = QInputDialog::getText(this, "编辑文本",
+                                                        "请输入新内容:",
+                                                        QLineEdit::Normal,
+                                                        target->getText(), &ok);
+                if (ok && !newText.isEmpty()) {
+                    target->setText(newText);
+                }
+            }
+            }
+        );
 
-    // 连接删除请求信号
-    connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target){
-        // 从选中集合中移除
-        m_selected_items.remove(target);
+        // 连接删除请求信号
+        connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target){
+            // 从选中集合中移除
+            m_selected_items.remove(target);
 
-        // 从物品映射中移除
-        m_items.remove(target);
+            // 从物品映射中移除
+            m_items.remove(target);
 
-        // 从场景中移除
-        m_graphics_scene->removeItem(target);
+            // 从场景中移除
+            m_graphics_scene->removeItem(target);
 
-        // 删除对象
-        delete target;
-    });
+            // 删除对象
+            delete target;
+        });
 
-    // 选中新添加的物品
-    selectItem(item);
+        // 选中新添加的物品
+        selectItem(item);
+    } else {
+        // 如果是画布，连接画布双击信号
+        connect(item, &ResizableItem::itemDoubleClicked,
+                this, &MainWindow::onCanvasDoubleClicked);
+    }
 }
 
 void MainWindow::selectItem(ResizableItem* item)
 {
+    if (!item || (item->isCanvas() && m_editMode != CanvasEditMode)) {
+        return;  // 画布在非编辑模式下不可选中
+    }
+
     deselectAll();
 
     item->setSelected(true);
@@ -386,8 +460,10 @@ void MainWindow::selectItem(ResizableItem* item)
 void MainWindow::deselectAll()
 {
     for (ResizableItem* item : m_selected_items) {
-        item->setSelected(false);
-        // item->setGraphicsEffect(nullptr);
+        if (item != m_canvasItem || m_editMode == CanvasEditMode) {
+            item->setSelected(false);
+            // item->setGraphicsEffect(nullptr);
+        }
     }
     m_selected_items.clear();
 }
@@ -404,40 +480,76 @@ void MainWindow::onSaveAsFile()
 
 void MainWindow::save(QString title)
 {
-    // 临时保存背景并移除
+    // 获取导出区域
+    QRectF exportRect = getCanvasExportRect();
+    if (exportRect.isEmpty()) {
+        QMessageBox::warning(this, "错误", "无法确定导出区域");
+        return;
+    }
+
+    // 临时保存背景并移除（实现透明背景导出）
     QBrush oldBackground = m_graphics_scene->backgroundBrush();
+    QBrush oldForeground = m_graphics_scene->foregroundBrush();
     m_graphics_scene->setBackgroundBrush(Qt::NoBrush);
+    m_graphics_scene->setForegroundBrush(Qt::NoBrush);
 
-    // 获取当前视口的可见区域（在场景坐标系中）
-    QRectF visibleRect = m_graphics_view->mapToScene(
-                                            m_graphics_view->viewport()->rect()).boundingRect();
+    // 临时隐藏画布选择边框（如果选中）
+    bool canvasWasSelected = m_canvasItem && m_canvasItem->isSelected();
+    if (m_canvasItem && canvasWasSelected) {
+        m_canvasItem->setSelected(false);
+    }
 
-    // 创建QImage（使用可见区域的大小）
-    QImage image(visibleRect.size().toSize(), QImage::Format_ARGB32);
-    image.fill(Qt::transparent);  // 设置透明背景
+    // 创建QImage（使用画布大小）
+    QSize imageSize = exportRect.size().toSize();
+    QImage image(imageSize, QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
 
-    // 创建QPainter并渲染可见区域
+    // 创建QPainter并渲染画布区域
     QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    // 渲染场景到图像，只渲染画布区域
     m_graphics_scene->render(&painter,
-                             QRectF(),  // 目标矩形（整个image）
-                             visibleRect);  // 源矩形（只渲染可见区域）
+                             QRectF(0, 0, imageSize.width(), imageSize.height()),  // 目标矩形
+                             exportRect);  // 源矩形（画布区域）
     painter.end();
+
+    // 恢复画布选择状态
+    if (m_canvasItem && canvasWasSelected) {
+        m_canvasItem->setSelected(true);
+    }
 
     // 恢复背景
     m_graphics_scene->setBackgroundBrush(oldBackground);
+    m_graphics_scene->setForegroundBrush(oldForeground);
 
     // 创建格式过滤器
-    QString filter = "JPEG (*.jpg *.jpeg);;";
-    filter += "PNG (*.png);;"
+    QString filter = "PNG (*.png);;";  // PNG支持透明度
+    filter += "JPEG (*.jpg *.jpeg);;"
               "BMP (*.bmp);;"
               "GIF (*.gif);;"
               "TIFF (*.tif *.tiff);;"
               "所有文件 (*.*)";
 
-    // 保存
+    // 保存文件
     QString path = QFileDialog::getSaveFileName(this, title, "/untitled", filter);
     if (!path.isEmpty()) {
-        image.save(path);
+        // 根据文件扩展名选择保存格式
+        if (path.endsWith(".png", Qt::CaseInsensitive)) {
+            image.save(path, "PNG");
+        } else if (path.endsWith(".jpg", Qt::CaseInsensitive) ||
+                   path.endsWith(".jpeg", Qt::CaseInsensitive)) {
+            // JPEG不支持透明度，需要填充白色背景
+            QImage jpegImage(imageSize, QImage::Format_RGB32);
+            jpegImage.fill(Qt::white);
+            QPainter jpegPainter(&jpegImage);
+            jpegPainter.drawImage(0, 0, image);
+            jpegPainter.end();
+            jpegImage.save(path, "JPEG");
+        } else {
+            image.save(path);
+        }
     }
 }
 void MainWindow::onExit()
@@ -503,6 +615,132 @@ void MainWindow::setupDefaultMenuConfig() {
     m_menuConfigs.append(fileMenu);
     // 显示错误信息
     QMessageBox::critical(this,"错误","加载菜单栏配置错误！");
+}
+
+// 画布管理方法实现
+void MainWindow::createDefaultCanvas() {
+    if (m_canvasItem) {
+        return;  // 画布已存在
+    }
+
+    m_canvasItem = new ResizableItem();
+    m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
+    m_canvasItem->setPos(100, 100);  // 留出边距
+    m_canvasItem->setZValue(-1000);  // 极低的z值，确保在底层
+    m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, false);
+    m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, false);
+
+    m_graphics_scene->addItem(m_canvasItem);
+
+    // 连接画布信号
+    connect(m_canvasItem, &ResizableItem::itemDoubleClicked,
+            this, &MainWindow::onCanvasDoubleClicked);
+}
+
+void MainWindow::setEditMode(EditMode mode) {
+    m_editMode = mode;
+
+    // 更新画布可编辑性
+    bool canvasEditable = (mode == CanvasEditMode);
+    if (m_canvasItem) {
+        m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, canvasEditable);
+        m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, canvasEditable);
+    }
+
+    // 更新其他项目的可编辑性
+    updateItemEditability();
+
+    // 更新UI状态
+    updateEditModeUI();
+}
+
+void MainWindow::updateItemEditability() {
+    for (auto it = m_items.begin(); it != m_items.end(); ++it) {
+        ResizableItem* item = it.key();
+        if (item != m_canvasItem) {
+            bool editable = (m_editMode == NormalMode);
+            item->setFlag(QGraphicsItem::ItemIsMovable, editable);
+            item->setFlag(QGraphicsItem::ItemIsSelectable, editable);
+        }
+    }
+}
+
+QRectF MainWindow::getCanvasExportRect() const {
+    if (!m_canvasItem) {
+        // 如果没有画布，使用可见区域（向后兼容）
+        return m_graphics_view->mapToScene(
+                   m_graphics_view->viewport()->rect()).boundingRect();
+    }
+
+    // 获取画布的边界矩形（场景坐标系）
+    QRectF canvasRect = m_canvasItem->boundingRect();
+    QPointF canvasPos = m_canvasItem->pos();
+    QRectF exportRect(canvasPos, canvasRect.size());
+
+    // 确保导出区域有效
+    if (exportRect.width() <= 0 || exportRect.height() <= 0) {
+        exportRect = QRectF(0, 0, 800, 600);  // 默认大小
+    }
+
+    return exportRect;
+}
+
+void MainWindow::updateEditModeUI() {
+    // 更新菜单项选中状态
+    QAction* canvasEditAction = m_actionMap.value("action_canvas_edit");
+    if (canvasEditAction) {
+        canvasEditAction->setChecked(m_editMode == CanvasEditMode);
+    }
+
+    // 更新状态栏信息
+    if (m_editMode == CanvasEditMode) {
+        ui->statusbar->showMessage("画布编辑模式 - 可以调整画布大小和位置");
+    } else {
+        ui->statusbar->showMessage("普通编辑模式 - 可以编辑图片和文字");
+    }
+}
+
+// 画布相关槽函数实现
+void MainWindow::onToggleCanvasEditMode() {
+    if (m_editMode == NormalMode) {
+        setEditMode(CanvasEditMode);
+    } else {
+        setEditMode(NormalMode);
+    }
+}
+
+void MainWindow::onCanvasDoubleClicked(ResizableItem* canvas) {
+    if (canvas == m_canvasItem && m_editMode == CanvasEditMode) {
+        // 在画布编辑模式下双击画布可以设置大小
+        onSetCanvasSize();
+    }
+}
+
+void MainWindow::onSetCanvasSize() {
+    if (!m_canvasItem) return;
+
+    QSizeF currentSize = m_canvasItem->getCanvasSize();
+    bool ok;
+    double width = QInputDialog::getDouble(this, "设置画布宽度",
+                                          "宽度 (像素):",
+                                          currentSize.width(),
+                                          50, 5000, 1, &ok);
+    if (!ok) return;
+
+    double height = QInputDialog::getDouble(this, "设置画布高度",
+                                           "高度 (像素):",
+                                           currentSize.height(),
+                                           50, 5000, 1, &ok);
+    if (!ok) return;
+
+    m_canvasItem->setCanvas(QSizeF(width, height), Qt::white);
+}
+
+void MainWindow::onResetCanvas() {
+    if (m_canvasItem) {
+        m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
+        m_canvasItem->setPos(100, 100);
+    }
 }
 
 

@@ -17,7 +17,7 @@ const int MIN_SIZE = 20; // 最小尺寸
 
 ResizableItem::ResizableItem(QGraphicsItem *parent)
     : QGraphicsObject (parent), m_type(Type_Text), m_rect(0, 0, 100, 100),
-      m_textBackgroundColor(Qt::transparent), m_textColor(Qt::black), m_currentScale(1.0), m_handleSelected(Handle_None)
+      m_textBackgroundColor(Qt::transparent), m_textColor(Qt::black), m_canvasColor(Qt::white), m_currentScale(1.0), m_handleSelected(Handle_None)
 {
     // 允许选中和移动
     setFlags(ItemIsSelectable | ItemIsMovable | ItemSendsGeometryChanges);
@@ -70,7 +70,17 @@ void ResizableItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
     if (m_type == Type_Image) {
         // 绘制图片（拉伸适应当前矩形）
         painter->drawPixmap(m_rect.toRect(), m_pixmap);
-    } else {
+    } else if (m_type == Type_Canvas) {
+        // 绘制画布背景
+        painter->setBrush(m_canvasColor);
+        painter->setPen(Qt::NoPen);
+        painter->drawRect(m_rect);
+
+        // 绘制画布边框（虚线）
+        painter->setPen(QPen(Qt::gray, 1, Qt::DashLine));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawRect(m_rect);
+    } else { // Type_Text
         // 绘制背景
         painter->setBrush(m_textBackgroundColor);
         painter->setPen(Qt::NoPen);
@@ -415,8 +425,33 @@ void ResizableItem::setTextColor(const QColor &color)
     }
 }
 
+// 画布相关方法实现
+void ResizableItem::setCanvas(const QSizeF &size, const QColor &color) {
+    m_type = Type_Canvas;
+    m_rect = QRectF(0, 0, size.width(), size.height());
+    m_canvasColor = color;
+    update();
+}
+
+QSizeF ResizableItem::getCanvasSize() const {
+    return m_rect.size();
+}
+
+void ResizableItem::setCanvasColor(const QColor &color) {
+    if (m_type == Type_Canvas) {
+        m_canvasColor = color;
+        update();
+    }
+}
+
 void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
+    // 如果是画布类型，不显示右键菜单（通过主窗口菜单编辑）
+    if (m_type == Type_Canvas) {
+        event->accept();
+        return;
+    }
+
     // 创建右键菜单
     QMenu menu;
 

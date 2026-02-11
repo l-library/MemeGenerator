@@ -54,6 +54,19 @@ private slots:
     void onCutting();
     void onFilter();
 
+    // 画布相关槽函数
+    void onToggleCanvasEditMode();
+    void onCanvasDoubleClicked(ResizableItem* canvas);
+    void onSetCanvasSize();
+    void onResetCanvas();
+
+private:
+    // 编辑模式枚举
+    enum EditMode {
+        NormalMode,      // 普通编辑模式
+        CanvasEditMode   // 画布编辑模式
+    };
+
 private:
     Ui::MainWindow *ui;
     void initMenuBar();
@@ -69,6 +82,13 @@ private:
     void deselectAll();
     QImage* getImageFromFile(QString title);
 
+    // 画布管理相关方法
+    void createDefaultCanvas();
+    void setEditMode(EditMode mode);
+    void updateItemEditability();
+    QRectF getCanvasExportRect() const;
+    void updateEditModeUI();
+
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
     // 图形界面
@@ -81,5 +101,8 @@ private:
     qreal m_current_z_value;                              // 当前z值计数器
     // 当前视图的整体
     double m_view_scale;
+    // 画布管理
+    EditMode m_editMode;          // 当前编辑模式
+    ResizableItem* m_canvasItem;  // 指向画布对象的指针
 };
 #endif // MAINWINDOW_H
