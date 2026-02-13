@@ -118,6 +118,17 @@ void MainWindow::initButton()
     canvasEditButton->setShortcut(QKeySequence("Ctrl+E"));
     m_grid_layout->addWidget(canvasEditButton,0,2);
 
+    // 打开文件按钮
+    QPushButton* file_open_btn = new QPushButton(this);
+    file_open_btn->setText("打开文件");
+    file_open_btn->setStatusTip("选择一个图片文件打开，自动调整画布(Ctrl+O)");
+    file_open_btn->setIcon(QIcon(":/icons/fileopen.png"));
+    file_open_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(file_open_btn, &QPushButton::pressed, [=]() {
+        onOpenFile();
+    });
+    m_grid_layout->addWidget(file_open_btn,1,2);
+
     // 插入图片按钮
     QPushButton* insert_picture_btn = new QPushButton(this);
     insert_picture_btn->setText("插入图片");
@@ -127,7 +138,7 @@ void MainWindow::initButton()
     connect(insert_picture_btn, &QPushButton::pressed, [=]() {
         onInsertPicture();
     });
-    m_grid_layout->addWidget(insert_picture_btn,1,2);
+    m_grid_layout->addWidget(insert_picture_btn,2,2);
 
     // 插入文本按钮
     QPushButton* insert_text_btn = new QPushButton(this);
@@ -138,7 +149,7 @@ void MainWindow::initButton()
     connect(insert_text_btn, &QPushButton::pressed, [=]() {
         onInsertText();
     });
-    m_grid_layout->addWidget(insert_text_btn,2,2);
+    m_grid_layout->addWidget(insert_text_btn,3,2);
 
     // 导出按钮
     QPushButton* save_file_button = new QPushButton(this);
@@ -338,6 +349,10 @@ void MainWindow::onOpenFile() {
         return;
     ResizableItem* pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(*image));
+
+    // 设置画布大小
+    m_canvasItem->setCanvas(QSizeF(image->rect().size().width(), image->rect().size().height()), Qt::white);
+
     // 添加到场景
     addItemToScene(pixmapItem);
 }
@@ -614,7 +629,7 @@ void MainWindow::createDefaultCanvas() {
 
     m_canvasItem = new ResizableItem();
     m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
-    m_canvasItem->setPos(100, 100);  // 留出边距
+    m_canvasItem->setPos(0, 0);
     m_canvasItem->setZValue(-1000);  // 极低的z值，确保在底层
     m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, false);
     m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, false);
@@ -626,6 +641,8 @@ void MainWindow::createDefaultCanvas() {
             this, &MainWindow::onCanvasDoubleClicked);
     connect(m_canvasItem, &ResizableItem::sizeChanged,
             this, &MainWindow::onUpdateCanvasSizeLabel);
+    connect(m_canvasItem, &ResizableItem::changeCanvasSize,
+            this, [this]{onSetCanvasSize();});
 }
 
 void MainWindow::setEditMode(EditMode mode) {

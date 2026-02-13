@@ -449,12 +449,6 @@ void ResizableItem::setCanvasColor(const QColor &color) {
 
 void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
-    // 如果是画布类型，不显示右键菜单（通过主窗口菜单编辑）
-    if (m_type == Type_Canvas) {
-        event->accept();
-        return;
-    }
-
     // 创建右键菜单
     QMenu menu;
 
@@ -509,6 +503,27 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         } else if (selectedAction == deleteAction) {
             // 发射删除请求信号
             emit itemDeleteRequested(this);
+        }
+    } else if(m_type == Type_Canvas){
+        // 画布类型菜单
+        QAction *changeColorAction = menu.addAction("更换画布背景颜色");
+        QAction *changeSizeAction = menu.addAction("更改画布大小");
+        // 执行选中的动作
+        QAction *selectedAction = menu.exec(event->screenPos());
+        if (selectedAction == changeColorAction) {
+            QColor color = QColorDialog::getColor(
+                m_textColor,
+                QApplication::activeWindow(),
+                "选择背景颜色",
+                QColorDialog::ShowAlphaChannel
+                );
+            if (color.isValid()) {
+                m_canvasColor = color;
+                update();
+            }
+        } else if (selectedAction == changeSizeAction) {
+            // 触发双击信号，让主窗口处理大小变换
+            emit changeCanvasSize(this);
         }
     }
 

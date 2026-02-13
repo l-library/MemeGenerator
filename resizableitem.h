@@ -66,6 +66,8 @@ signals:
     void itemDeleteRequested(ResizableItem *item);
     // 大小变化信号
     void sizeChanged(ResizableItem *item);
+    // 更改画布大小信号
+    void changeCanvasSize(ResizableItem *item);
 
 protected:
     // 鼠标悬停
