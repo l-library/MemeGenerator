@@ -13,7 +13,8 @@ enum HandlePosition {
 // 物品类型枚举
 enum ItemType {
     Type_Image,
-    Type_Text
+    Type_Text,
+    Type_Canvas  // 新增画布类型
 };
 
 class ResizableItem : public QGraphicsObject
@@ -48,12 +49,25 @@ public:
     // 设置文本颜色（仅对文本类型有效）
     void setTextColor(const QColor &color);
 
+    // 画布相关方法
+    // 设置为画布模式
+    void setCanvas(const QSizeF &size, const QColor &color = Qt::white);
+    // 获取画布大小
+    QSizeF getCanvasSize() const;
+    // 设置画布颜色
+    void setCanvasColor(const QColor &color);
+    // 检查是否为画布
+    bool isCanvas() const { return m_type == Type_Canvas; }
+
 signals:
     // 双击信号
     void itemDoubleClicked(ResizableItem *item);
     // 删除请求信号
     void itemDeleteRequested(ResizableItem *item);
-
+    // 大小变化信号
+    void sizeChanged(ResizableItem *item);
+    // 更改画布大小信号
+    void changeCanvasSize(ResizableItem *item);
 
 protected:
     // 鼠标悬停
@@ -80,6 +94,7 @@ private:
     QPixmap m_pixmap;
     QColor m_textBackgroundColor;  // 文本背景颜色
     QColor m_textColor;            // 文本颜色
+    QColor m_canvasColor;          // 画布背景颜色
     mutable qreal m_currentScale;  // 当前视图缩放因子，用于固定手柄大小
 
     HandlePosition m_handleSelected;
