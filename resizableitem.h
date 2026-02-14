@@ -44,6 +44,9 @@ public:
     // 获得当前文本内容
     QString getText(){return m_text; }
 
+    // 获得当前图片（仅对图片有效）
+    QPixmap getPixmap(){return m_pixmap; }
+
     // 设置文本背景颜色（仅对文本类型有效）
     void setTextBackgroundColor(const QColor &color);
     // 设置文本颜色（仅对文本类型有效）
@@ -62,10 +65,14 @@ public:
 signals:
     // 双击信号
     void itemDoubleClicked(ResizableItem *item);
+    // 裁剪请求信号
+    void imageCropRequested(ResizableItem *item);
     // 删除请求信号
     void itemDeleteRequested(ResizableItem *item);
     // 大小变化信号
     void sizeChanged(ResizableItem *item);
+    // 位置变化信号
+    void positionChanged(ResizableItem *item);
     // 更改画布大小信号
     void changeCanvasSize(ResizableItem *item);
 

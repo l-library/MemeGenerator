@@ -82,10 +82,12 @@ private:
     void addItemToScene(ResizableItem* item);
     void selectItem(ResizableItem* item);
     void deselectAll();
+    void clearScene();
     QImage* getImageFromFile(QString title);
 
     // 画布管理相关方法
     void createDefaultCanvas();
+    void createCanvas(QSizeF size, qreal pos_x, qreal pox_y, Qt::GlobalColor color);
     void setEditMode(EditMode mode);
     void updateItemEditability();
     QRectF getCanvasExportRect() const;
@@ -107,5 +109,6 @@ private:
     // 画布管理
     EditMode m_editMode;          // 当前编辑模式
     ResizableItem* m_canvasItem;  // 指向画布对象的指针
+    QPointF m_canvasOffset;       // 画布的位置偏移
 };
 #endif // MAINWINDOW_H
