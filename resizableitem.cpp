@@ -30,12 +30,11 @@ ResizableItem::ResizableItem(QGraphicsItem *parent)
 }
 
 void ResizableItem::setPixmap(const QPixmap &pixmap) {
+    prepareGeometryChange();   // 通知场景即将改变几何形状
     m_type = Type_Image;
     m_pixmap = pixmap;
     // 调整大小为图片大小
-    if (m_rect.width() == 100 && m_rect.height() == 100) {
-        m_rect.setSize(pixmap.size());
-    }
+    m_rect.setSize(pixmap.size());
     update();
 }
 

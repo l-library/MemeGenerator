@@ -23,75 +23,156 @@ class ResizableItem : public QGraphicsObject
     Q_OBJECT
 
 public:
-    // 构造函数
+    /**
+     * @brief 构造函数
+     * @param parent 父图形项指针
+     */
     explicit ResizableItem(QGraphicsItem *parent = nullptr);
 
-    // 设置为图片模式
+    /**
+     * @brief 设置为图片模式
+     * @param pixmap 图片数据
+     */
     void setPixmap(const QPixmap &pixmap);
 
-    // 设置为文本模式
+    /**
+     * @brief 设置为文本模式
+     * @param text 文本内容
+     */
     void setText(const QString &text);
 
-    // 返回包围盒
+    /**
+     * @brief 返回包围盒
+     * @return 包围盒矩形
+     */
     QRectF boundingRect() const override;
 
-    // 核心绘制逻辑
+    /**
+     * @brief 核心绘制逻辑
+     * @param painter 绘图器
+     * @param option 绘图选项
+     * @param widget 部件指针
+     */
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
-    // 获得当前物品的类型
+    /**
+     * @brief 获得当前物品的类型
+     * @return 物品类型枚举
+     */
     ItemType getItemType(){return m_type; }
 
-    // 获得当前文本内容
+    /**
+     * @brief 获得当前文本内容
+     * @return 文本字符串
+     */
     QString getText(){return m_text; }
 
-    // 获得当前图片（仅对图片有效）
+    /**
+     * @brief 获得当前图片（仅对图片有效）
+     * @return 图片数据
+     */
     QPixmap getPixmap(){return m_pixmap; }
 
-    // 设置文本背景颜色（仅对文本类型有效）
+    /**
+     * @brief 设置文本背景颜色（仅对文本类型有效）
+     * @param color 背景颜色
+     */
     void setTextBackgroundColor(const QColor &color);
-    // 设置文本颜色（仅对文本类型有效）
+    /**
+     * @brief 设置文本颜色（仅对文本类型有效）
+     * @param color 文本颜色
+     */
     void setTextColor(const QColor &color);
 
     // 画布相关方法
-    // 设置为画布模式
+    /**
+     * @brief 设置为画布模式
+     * @param size 画布大小
+     * @param color 画布颜色，默认为白色
+     */
     void setCanvas(const QSizeF &size, const QColor &color = Qt::white);
-    // 获取画布大小
+    /**
+     * @brief 获取画布大小
+     * @return 画布大小
+     */
     QSizeF getCanvasSize() const;
-    // 设置画布颜色
+    /**
+     * @brief 设置画布颜色
+     * @param color 画布颜色
+     */
     void setCanvasColor(const QColor &color);
-    // 检查是否为画布
+    /**
+     * @brief 检查是否为画布
+     * @return 如果是画布类型返回true，否则返回false
+     */
     bool isCanvas() const { return m_type == Type_Canvas; }
 
 signals:
-    // 双击信号
+    /**
+     * @brief 双击信号
+     * @param item 被双击的项指针
+     */
     void itemDoubleClicked(ResizableItem *item);
-    // 裁剪请求信号
+    /**
+     * @brief 裁剪请求信号
+     * @param item 请求裁剪的项指针
+     */
     void imageCropRequested(ResizableItem *item);
-    // 删除请求信号
+    /**
+     * @brief 删除请求信号
+     * @param item 请求删除的项指针
+     */
     void itemDeleteRequested(ResizableItem *item);
-    // 大小变化信号
+    /**
+     * @brief 大小变化信号
+     * @param item 大小发生变化的项指针
+     */
     void sizeChanged(ResizableItem *item);
-    // 位置变化信号
+    /**
+     * @brief 位置变化信号
+     * @param item 位置发生变化的项指针
+     */
     void positionChanged(ResizableItem *item);
-    // 更改画布大小信号
+    /**
+     * @brief 更改画布大小信号
+     * @param item 请求更改画布大小的项指针
+     */
     void changeCanvasSize(ResizableItem *item);
 
 protected:
-    // 鼠标悬停
+    /**
+     * @brief 鼠标悬停事件处理
+     * @param event 鼠标悬停事件
+     */
     void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
 
-    // 鼠标按下
+    /**
+     * @brief 鼠标按下事件处理
+     * @param event 鼠标按下事件
+     */
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
-    // 鼠标移动：执行调整大小或移动
+    /**
+     * @brief 鼠标移动事件处理：执行调整大小或移动
+     * @param event 鼠标移动事件
+     */
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 
-    // 鼠标释放：重置状态
+    /**
+     * @brief 鼠标释放事件处理：重置状态
+     * @param event 鼠标释放事件
+     */
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
-    // 双击事件声明
+    /**
+     * @brief 鼠标双击事件处理
+     * @param event 鼠标双击事件
+     */
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
-    // 右键菜单事件
+    /**
+     * @brief 右键菜单事件处理
+     * @param event 右键菜单事件
+     */
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
 private:
@@ -110,13 +191,24 @@ private:
     QRectF m_initialRect;          // 记录初始的 rect
     QPointF m_initialPos;          // 记录 Item 初始的场景位置 pos()
 
-    // 辅助函数：获取特定位置手柄的矩形区域
+    /**
+     * @brief 辅助函数：获取特定位置手柄的矩形区域
+     * @param handle 手柄位置枚举
+     * @return 手柄矩形区域
+     */
     QRectF getHandleRect(HandlePosition handle) const;
 
-    // 辅助函数：判断点在哪个手柄上
+    /**
+     * @brief 辅助函数：判断点在哪个手柄上
+     * @param p 点坐标
+     * @return 手柄位置枚举
+     */
     HandlePosition getHandleAt(const QPointF &p) const;
 
-    // 辅助函数：设置光标
+    /**
+     * @brief 辅助函数：设置光标
+     * @param handle 手柄位置枚举
+     */
     void setCursorShape(HandlePosition handle);
 };
 

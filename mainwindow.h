@@ -24,12 +24,19 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    // 构造函数中的parent是指父窗口
-    // 如果parent是0，表示窗口是一个顶层的窗口
+    /**
+     * @brief 主窗口构造函数
+     * @param parent 父窗口指针，如果为nullptr则表示顶层窗口
+     */
     MainWindow(QWidget *parent = nullptr);
+    /**
+     * @brief 主窗口析构函数
+     */
     ~MainWindow();
 
-    // 场景中的物品数据结构（图片/文本）
+    /**
+     * @brief 场景中的物品数据结构（图片/文本）
+     */
     struct Item {
         ResizableItem* pixmapItem;
         QPointF offset;  // 相对于原始位置的偏移
@@ -38,29 +45,93 @@ public:
 
 private slots:
     // 槽函数
+    /**
+     * @brief 新建文件槽函数
+     */
     void onNewFile();
+    /**
+     * @brief 打开文件槽函数
+     */
     void onOpenFile();
+    /**
+     * @brief 保存文件槽函数
+     */
     void onSaveFile();
+    /**
+     * @brief 另存为文件槽函数
+     */
     void onSaveAsFile();
+    /**
+     * @brief 退出应用程序槽函数
+     */
     void onExit();
+    /**
+     * @brief 撤销操作槽函数
+     */
     void onUndo();
+    /**
+     * @brief 重做操作槽函数
+     */
     void onRedo();
+    /**
+     * @brief 关于对话框槽函数
+     */
     void onAbout();
+    /**
+     * @brief 放大视图槽函数
+     */
     void onZoomIn();
+    /**
+     * @brief 缩小视图槽函数
+     */
     void onZoomOut();
+    /**
+     * @brief 复制选中项槽函数
+     */
     void onCopy();
+    /**
+     * @brief 粘贴槽函数
+     */
     void onPaste();
+    /**
+     * @brief 插入图片槽函数
+     */
     void onInsertPicture();
+    /**
+     * @brief 插入文本槽函数
+     */
     void onInsertText();
+    /**
+     * @brief 裁剪图片槽函数
+     */
     void onCutting();
+    /**
+     * @brief 应用滤镜槽函数
+     */
     void onFilter();
 
     // 画布相关槽函数
+    /**
+     * @brief 切换画布编辑模式槽函数
+     */
     void onToggleCanvasEditMode();
+    /**
+     * @brief 画布双击事件槽函数
+     * @param canvas 被双击的画布项指针
+     */
     void onCanvasDoubleClicked(ResizableItem* canvas);
+    /**
+     * @brief 设置画布大小槽函数
+     */
     void onSetCanvasSize();
+    /**
+     * @brief 重置画布槽函数
+     */
     void onResetCanvas();
-    void onUpdateCanvasSizeLabel();          // 更新状态栏信息
+    /**
+     * @brief 更新画布大小标签槽函数
+     */
+    void onUpdateCanvasSizeLabel();
 
 private:
     // 编辑模式枚举
@@ -71,26 +142,96 @@ private:
 
 private:
     Ui::MainWindow *ui;
+    /**
+     * @brief 初始化菜单栏
+     */
     void initMenuBar();
+    /**
+     * @brief 初始化图形视图
+     */
     void initGraphicsView();
+    /**
+     * @brief 初始化按钮
+     */
     void initButton();
+    /**
+     * @brief 保存文件
+     * @param title 对话框标题
+     */
     void save(QString title);
+    /**
+     * @brief 加载菜单配置
+     */
     void loadMenuConfig();
+    /**
+     * @brief 根据配置创建菜单
+     */
     void createMenuFromConfig();
+    /**
+     * @brief 连接菜单动作到槽函数
+     * @param actionId 动作ID
+     * @param action 动作指针
+     */
     void connectActionToSlot(const QString& actionId, QAction* action);
+    /**
+     * @brief 设置默认菜单配置
+     */
     void setupDefaultMenuConfig();
+    /**
+     * @brief 添加项目到场景
+     * @param item 可调整大小的项目指针
+     */
     void addItemToScene(ResizableItem* item);
+    /**
+     * @brief 选择项目
+     * @param item 要选择的项目指针
+     */
     void selectItem(ResizableItem* item);
+    /**
+     * @brief 取消所有选择
+     */
     void deselectAll();
+    /**
+     * @brief 清空场景
+     */
     void clearScene();
+    /**
+     * @brief 从文件获取图片
+     * @param title 对话框标题
+     * @return 图片指针
+     */
     QImage* getImageFromFile(QString title);
 
     // 画布管理相关方法
+    /**
+     * @brief 创建默认画布
+     */
     void createDefaultCanvas();
+    /**
+     * @brief 创建画布
+     * @param size 画布大小
+     * @param pos_x X坐标
+     * @param pox_y Y坐标（疑似拼写错误，应为pos_y）
+     * @param color 画布颜色
+     */
     void createCanvas(QSizeF size, qreal pos_x, qreal pox_y, Qt::GlobalColor color);
+    /**
+     * @brief 设置编辑模式
+     * @param mode 编辑模式枚举
+     */
     void setEditMode(EditMode mode);
+    /**
+     * @brief 更新项目可编辑性
+     */
     void updateItemEditability();
+    /**
+     * @brief 获取画布导出区域
+     * @return 画布矩形区域
+     */
     QRectF getCanvasExportRect() const;
+    /**
+     * @brief 更新编辑模式UI
+     */
     void updateEditModeUI();
 
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射

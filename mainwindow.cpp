@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
         );
     statusBar()->showMessage("准备就绪");
     // 画布大小状态显示
-    QSizeF size = m_canvasItem->boundingRect().size();
+    QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
     m_canvasSizeLabel = new QLabel(message,this);
     // 将初始化的标签添加到底部状态栏上
@@ -368,6 +368,9 @@ void MainWindow::onOpenFile() {
 
     // 添加到场景
     addItemToScene(pixmapItem);
+
+    // 更新画布大小信息
+    onUpdateCanvasSizeLabel();
 }
 
 // 将图片添加到场景
@@ -422,6 +425,7 @@ void MainWindow::addItemToScene(ResizableItem* item)
                 if(!image)
                     return;
                 target->setPixmap(QPixmap::fromImage(*image));
+
             }
             else{
                 bool ok;
@@ -741,16 +745,15 @@ QRectF MainWindow::getCanvasExportRect() const {
                    m_graphics_view->viewport()->rect()).boundingRect();
     }
 
-    // 获取画布的边界矩形（场景坐标系）
-    QRectF canvasRect = m_canvasItem->boundingRect();
-    QPointF canvasPos = m_canvasItem->pos();
-    QRectF exportRect(canvasPos, canvasRect.size());
+    // 获取画布实际内容矩形（不包含手柄、边框等）
+    QSizeF canvasSize = m_canvasItem->getCanvasSize();  // 内容尺寸
+    QPointF canvasPos = m_canvasItem->pos();            // 左上角位置
+    QRectF exportRect(canvasPos, canvasSize);
 
-    // 确保导出区域有效
+    // 防止无效尺寸
     if (exportRect.width() <= 0 || exportRect.height() <= 0) {
-        exportRect = QRectF(0, 0, 800, 600);  // 默认大小
+        exportRect = QRectF(0, 0, 800, 600);
     }
-
     return exportRect;
 }
 
@@ -814,7 +817,7 @@ void MainWindow::onResetCanvas() {
 
 void MainWindow::onUpdateCanvasSizeLabel()
 {
-    QSizeF size = m_canvasItem->boundingRect().size();
+    QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
     m_canvasSizeLabel->setText(message);
 }
