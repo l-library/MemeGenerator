@@ -30,12 +30,11 @@ ResizableItem::ResizableItem(QGraphicsItem *parent)
 }
 
 void ResizableItem::setPixmap(const QPixmap &pixmap) {
+    prepareGeometryChange();   // 通知场景即将改变几何形状
     m_type = Type_Image;
     m_pixmap = pixmap;
     // 调整大小为图片大小
-    if (m_rect.width() == 100 && m_rect.height() == 100) {
-        m_rect.setSize(pixmap.size());
-    }
+    m_rect.setSize(pixmap.size());
     update();
 }
 
@@ -349,10 +348,13 @@ void ResizableItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         setPos(newPos);
 
         // 发送大小变化信号
-        emit sizeChanged(this);
+        if(m_type == ItemType::Type_Canvas)
+            emit sizeChanged(this);
 
     } else {
         QGraphicsItem::mouseMoveEvent(event);
+        if(m_type == ItemType::Type_Canvas)
+            emit positionChanged(this); //发送位置变动信号
     }
 }
 
@@ -447,6 +449,7 @@ void ResizableItem::setCanvasColor(const QColor &color) {
     }
 }
 
+// 右键菜单
 void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
     // 创建右键菜单
@@ -493,6 +496,7 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     } else if (m_type == Type_Image) {
         // 图像类型菜单
         QAction *changeImageAction = menu.addAction("更换图像");
+        QAction *imageCropAction = menu.addAction("裁剪图像");
         QAction *deleteAction = menu.addAction("删除");
 
         // 执行选中的动作
@@ -500,7 +504,12 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         if (selectedAction == changeImageAction) {
             // 触发双击信号，让主窗口处理图像更换
             emit itemDoubleClicked(this);
-        } else if (selectedAction == deleteAction) {
+        }
+        else if(selectedAction== imageCropAction){
+            // 发射裁剪请求信号
+            emit imageCropRequested(this);
+        }
+        else if (selectedAction == deleteAction) {
             // 发射删除请求信号
             emit itemDeleteRequested(this);
         }

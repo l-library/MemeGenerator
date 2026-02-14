@@ -17,12 +17,14 @@
 #include <QGraphicsDropShadowEffect>
 #include <QInputDialog>
 #include "resizableitem.h"
+#include "imagecropperdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
      m_grid_layout(nullptr),m_graphics_scene(nullptr)
     , m_graphics_view(nullptr), m_current_z_value(0)
     ,m_view_scale(1.0), m_editMode(NormalMode), m_canvasItem(nullptr)
+    ,m_canvasOffset(0,0)
 {
     ui->setupUi(this);
 
@@ -65,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
         );
     statusBar()->showMessage("准备就绪");
     // 画布大小状态显示
-    QSizeF size = m_canvasItem->boundingRect().size();
+    QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
     m_canvasSizeLabel = new QLabel(message,this);
     // 将初始化的标签添加到底部状态栏上
@@ -350,11 +352,25 @@ void MainWindow::onOpenFile() {
     ResizableItem* pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(*image));
 
+
+    // 清理场景
+    clearScene();
+
     // 设置画布大小
-    m_canvasItem->setCanvas(QSizeF(image->rect().size().width(), image->rect().size().height()), Qt::white);
+    // 删除旧画布
+    m_selected_items.remove(m_canvasItem);// 从选中集合中移除
+    m_items.remove(m_canvasItem);// 从物品映射中移除
+    m_graphics_scene->removeItem(m_canvasItem);// 从场景中移除
+    delete m_canvasItem;// 删除对象
+    m_canvasItem = nullptr;
+    // 创建新画布
+    createCanvas(QSizeF(image->rect().width(),image->rect().height()),0,0,Qt::white);
 
     // 添加到场景
     addItemToScene(pixmapItem);
+
+    // 更新画布大小信息
+    onUpdateCanvasSizeLabel();
 }
 
 // 将图片添加到场景
@@ -388,8 +404,8 @@ void MainWindow::addItemToScene(ResizableItem* item)
     item->setAcceptHoverEvents(true); // 鼠标悬停事件
 
     // 设置位置（在已存在item的基础上偏移）
-    int offset = m_items.size() * 20;  // 每次偏移20像素
-    item->setPos(offset, offset);
+    QPointF offset = m_canvasOffset + QPointF(m_items.size() * 20,m_items.size() * 20);  // 每次偏移20像素
+    item->setPos(offset);
 
     // 添加到场景
     m_graphics_scene->addItem(item);
@@ -398,7 +414,7 @@ void MainWindow::addItemToScene(ResizableItem* item)
     if (!item->isCanvas()) {
         Item itemInfo;
         itemInfo.pixmapItem = item;
-        itemInfo.offset = QPointF(offset, offset);
+        itemInfo.offset = offset;
         itemInfo.zValue = m_current_z_value++;
         m_items[item] = itemInfo;
 
@@ -406,7 +422,10 @@ void MainWindow::addItemToScene(ResizableItem* item)
         connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
             if(target->getItemType()==ItemType::Type_Image){
                 auto image = getImageFromFile("选择要更换的图片");
+                if(!image)
+                    return;
                 target->setPixmap(QPixmap::fromImage(*image));
+
             }
             else{
                 bool ok;
@@ -421,6 +440,13 @@ void MainWindow::addItemToScene(ResizableItem* item)
             }
             }
         );
+
+        // 裁剪请求信号
+        connect(item,&ResizableItem::imageCropRequested,this,[](ResizableItem *target){
+            auto image = ImageCropperDialog::getCroppedImage(target->getPixmap(),1024,576,CropperShape::RECT);
+            if(!image.isNull())
+                target->setPixmap(image);
+        });// 发送信号端已经确保了item是图片
 
         // 连接删除请求信号
         connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target){
@@ -590,13 +616,42 @@ void MainWindow::onInsertText()
     text->setText("双击以输入文本");
     addItemToScene(text);
 }
-void MainWindow::onCutting(){};
+
+void MainWindow::onCutting()
+{
+    if(m_selected_items.size()!=1)
+    {
+        QMessageBox::warning(this,"错误","只能裁剪一个选中的图片");
+        return;
+    }
+    if((*m_selected_items.begin())->getItemType()!=ItemType::Type_Image)
+    {
+        QMessageBox::warning(this,"错误","无法裁剪非图片");
+        return;
+    }
+    auto image = ImageCropperDialog::getCroppedImage((*m_selected_items.begin())->getPixmap(),1024,576,CropperShape::RECT);
+    if(!image.isNull())
+        (*m_selected_items.begin())->setPixmap(image);
+}
+
 void MainWindow::onFilter(){};
 void MainWindow::onAbout()
 {
     QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v1.0</h3>"
             "<p>开发者：@l-library</p>"
             "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
+}
+
+void MainWindow::clearScene()
+{
+    // 移除并删除所有非画布项目
+    for (ResizableItem* item : m_items.keys()) {
+        m_graphics_scene->removeItem(item);
+        delete item;
+    }
+    m_items.clear();
+    m_selected_items.clear();
+    m_current_z_value = 0;   // Z值重置，新插入项将从0开始
 }
 
 // 备用默认配置
@@ -622,14 +677,20 @@ void MainWindow::setupDefaultMenuConfig() {
 }
 
 // 画布管理方法实现
-void MainWindow::createDefaultCanvas() {
+void MainWindow::createDefaultCanvas()
+{
+    createCanvas(QSizeF(800, 600),0,0,Qt::white);
+}
+
+void MainWindow::createCanvas(QSizeF size,qreal pos_x,qreal pos_y, Qt::GlobalColor color) {
     if (m_canvasItem) {
         return;  // 画布已存在
     }
 
     m_canvasItem = new ResizableItem();
-    m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
-    m_canvasItem->setPos(0, 0);
+    m_canvasItem->setCanvas(size, color);
+    m_canvasItem->setPos(pos_x, pos_y);
+    m_canvasOffset = QPointF(pos_x,pos_y);
     m_canvasItem->setZValue(-1000);  // 极低的z值，确保在底层
     m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, false);
     m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, false);
@@ -641,6 +702,10 @@ void MainWindow::createDefaultCanvas() {
             this, &MainWindow::onCanvasDoubleClicked);
     connect(m_canvasItem, &ResizableItem::sizeChanged,
             this, &MainWindow::onUpdateCanvasSizeLabel);
+    connect(m_canvasItem, &ResizableItem::positionChanged,
+            this, [this](){
+        m_canvasOffset=m_canvasItem->pos();
+    });
     connect(m_canvasItem, &ResizableItem::changeCanvasSize,
             this, [this]{onSetCanvasSize();});
 }
@@ -680,16 +745,15 @@ QRectF MainWindow::getCanvasExportRect() const {
                    m_graphics_view->viewport()->rect()).boundingRect();
     }
 
-    // 获取画布的边界矩形（场景坐标系）
-    QRectF canvasRect = m_canvasItem->boundingRect();
-    QPointF canvasPos = m_canvasItem->pos();
-    QRectF exportRect(canvasPos, canvasRect.size());
+    // 获取画布实际内容矩形（不包含手柄、边框等）
+    QSizeF canvasSize = m_canvasItem->getCanvasSize();  // 内容尺寸
+    QPointF canvasPos = m_canvasItem->pos();            // 左上角位置
+    QRectF exportRect(canvasPos, canvasSize);
 
-    // 确保导出区域有效
+    // 防止无效尺寸
     if (exportRect.width() <= 0 || exportRect.height() <= 0) {
-        exportRect = QRectF(0, 0, 800, 600);  // 默认大小
+        exportRect = QRectF(0, 0, 800, 600);
     }
-
     return exportRect;
 }
 
@@ -753,7 +817,7 @@ void MainWindow::onResetCanvas() {
 
 void MainWindow::onUpdateCanvasSizeLabel()
 {
-    QSizeF size = m_canvasItem->boundingRect().size();
+    QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
     m_canvasSizeLabel->setText(message);
 }
