@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
      m_grid_layout(nullptr),m_graphics_scene(nullptr)
     , m_graphics_view(nullptr), m_current_z_value(0)
     ,m_view_scale(1.0), m_editMode(NormalMode), m_canvasItem(nullptr)
-    ,m_canvasOffset(0,0)
+    ,m_canvasOffset(0,0), m_isModified(false)
 {
     ui->setupUi(this);
 
@@ -78,6 +78,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 初始化右侧按键
     initButton();
+
+    // 初始窗口修改状态为false
+    setWindowModified(false);
 }
 
 void MainWindow::initMenuBar() {
@@ -323,6 +326,10 @@ QImage MainWindow::getImageFromFile(QString title)
 
 // 槽函数实现
 void MainWindow::onNewFile() {
+    // 检查是否需要保存当前修改
+    if (!maybeSave())
+        return;
+
     // 清空现有项目
     clearScene();
 
@@ -337,9 +344,14 @@ void MainWindow::onNewFile() {
     setEditMode(NormalMode);
 
     ui->statusbar->showMessage("新建文件完成");
+    // resetModified();
 }
 
 void MainWindow::onOpenFile() {
+    // 检查是否需要保存当前修改
+    if (!maybeSave())
+        return;
+
     QImage image = getImageFromFile("选择要打开的文件");
     if(image.isNull())
         return;
@@ -365,6 +377,7 @@ void MainWindow::onOpenFile() {
 
     // 更新画布大小信息
     onUpdateCanvasSizeLabel();
+    // resetModified();
 }
 
 // 将图片添加到场景
@@ -419,7 +432,8 @@ void MainWindow::addItemToScene(ResizableItem* item)
                 if(image.isNull())
                     return;
                 target->setPixmap(QPixmap::fromImage(image));
-
+                // 标记场景已被修改
+                markModified();
             }
             else{
                 bool ok;
@@ -430,16 +444,21 @@ void MainWindow::addItemToScene(ResizableItem* item)
                                                         target->getText(), &ok);
                 if (ok && !newText.isEmpty()) {
                     target->setText(newText);
+                    // 标记场景已被修改
+                    markModified();
                 }
             }
             }
         );
 
         // 裁剪请求信号
-        connect(item,&ResizableItem::imageCropRequested,this,[](ResizableItem *target){
+        connect(item,&ResizableItem::imageCropRequested,this,[this](ResizableItem *target){
             auto image = ImageCropperDialog::getCroppedImage(target->getPixmap(),1024,576,CropperShape::RECT);
-            if(!image.isNull())
+            if(!image.isNull()) {
                 target->setPixmap(image);
+                // 标记场景已被修改
+                markModified();
+            }
         });// 发送信号端已经确保了item是图片
 
         // 连接删除请求信号
@@ -455,10 +474,22 @@ void MainWindow::addItemToScene(ResizableItem* item)
 
             // 删除对象
             delete target;
+            // 标记场景已被修改
+            markModified();
+        });
+
+        // 连接大小和位置变化信号，标记修改
+        connect(item, &ResizableItem::sizeChanged, this, [this](ResizableItem*){
+            markModified();
+        });
+        connect(item, &ResizableItem::positionChanged, this, [this](ResizableItem*){
+            markModified();
         });
 
         // 选中新添加的物品
         selectItem(item);
+        // 标记场景已被修改
+        markModified();
     } else {
         // 如果是画布，连接画布双击信号
         connect(item, &ResizableItem::itemDoubleClicked,
@@ -578,6 +609,8 @@ void MainWindow::save(QString title)
         } else {
             image.save(path);
         }
+        // 保存成功，重置修改状态
+        resetModified();
     }
 }
 void MainWindow::onExit()
@@ -679,11 +712,18 @@ void MainWindow::onCutting()
         return;
     }
     auto image = ImageCropperDialog::getCroppedImage((*m_selected_items.begin())->getPixmap(),1024,576,CropperShape::RECT);
-    if(!image.isNull())
+    if(!image.isNull()) {
         (*m_selected_items.begin())->setPixmap(image);
+        // 标记场景已被修改
+        markModified();
+    }
 }
 
-void MainWindow::onFilter(){};
+void MainWindow::onFilter(){
+    // TODO: 实现滤镜功能
+    // 应用滤镜后标记修改
+    markModified();
+};
 void MainWindow::onAbout()
 {
     QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v1.0</h3>"
@@ -750,10 +790,14 @@ void MainWindow::createCanvas(QSizeF size,qreal pos_x,qreal pos_y, Qt::GlobalCol
     connect(m_canvasItem, &ResizableItem::itemDoubleClicked,
             this, &MainWindow::onCanvasDoubleClicked);
     connect(m_canvasItem, &ResizableItem::sizeChanged,
-            this, &MainWindow::onUpdateCanvasSizeLabel);
+            this, [this](ResizableItem*){
+                onUpdateCanvasSizeLabel();
+                markModified();
+            });
     connect(m_canvasItem, &ResizableItem::positionChanged,
-            this, [this](){
+            this, [this](ResizableItem*){
         m_canvasOffset=m_canvasItem->pos();
+        markModified();
     });
     connect(m_canvasItem, &ResizableItem::changeCanvasSize,
             this, [this]{onSetCanvasSize();});
@@ -861,6 +905,8 @@ void MainWindow::onResetCanvas() {
     if (m_canvasItem) {
         m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
         m_canvasItem->setPos(100, 100);
+        // 标记场景已被修改
+        markModified();
     }
 }
 
@@ -869,6 +915,55 @@ void MainWindow::onUpdateCanvasSizeLabel()
     QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
     m_canvasSizeLabel->setText(message);
+}
+
+bool MainWindow::maybeSave()
+{
+    if (!m_isModified)
+        return true;
+
+    QMessageBox::StandardButton ret = QMessageBox::warning(
+        this, "表情包生成器",
+        tr("场景已被修改。\n"
+           "是否保存修改？"),
+        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+
+    if (ret == QMessageBox::Yes) {
+        // 调用保存文件
+        onSaveFile();
+        // 检查保存是否成功（如果用户取消保存对话框，m_isModified应该仍然为true）
+        return !m_isModified;  // 保存成功则返回true，取消则返回false
+    } else if (ret == QMessageBox::No) {
+        return true;  // 不保存，继续操作
+    } else {
+        return false; // 取消操作
+    }
+}
+
+void MainWindow::markModified()
+{
+    m_isModified = true;
+    // 使用Qt内置的窗口修改标志
+    setWindowModified(true);
+    // 在标题栏展示
+    setWindowTitle("表情包制作器 *");
+}
+
+void MainWindow::resetModified()
+{
+    m_isModified = false;
+    // 使用Qt内置的窗口修改标志
+    setWindowModified(false);
+    setWindowTitle("表情包制作器");
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (maybeSave()) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
 }
 
 MainWindow::~MainWindow()

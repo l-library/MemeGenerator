@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QCloseEvent>
 
 QT_BEGIN_NAMESPACE
 
@@ -234,6 +235,28 @@ private:
      */
     void updateEditModeUI();
 
+    /**
+     * @brief 检查是否需要保存修改，如果需要则提示用户
+     * @return true表示可以继续操作（用户选择"否"或保存成功），false表示用户取消操作
+     */
+    bool maybeSave();
+
+    /**
+     * @brief 标记场景已被修改
+     */
+    void markModified();
+
+    /**
+     * @brief 重置修改状态（例如保存或加载文件后）
+     */
+    void resetModified();
+
+    /**
+     * @brief 重写关闭事件，检查是否需要保存修改
+     * @param event 关闭事件
+     */
+    void closeEvent(QCloseEvent *event) override;
+
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
     QLabel* m_canvasSizeLabel;             // 状态栏显示当前画布大小
@@ -244,12 +267,14 @@ private:
     // 图片管理
     QMap<ResizableItem*, Item> m_items;             // 存储所有对象
     QSet<ResizableItem*> m_selected_items;          // 当前选中的对象
-    qreal m_current_z_value;                              // 当前z值计数器
+    qreal m_current_z_value;                        // 当前z值计数器
     // 当前视图的整体
     double m_view_scale;
     // 画布管理
     EditMode m_editMode;          // 当前编辑模式
     ResizableItem* m_canvasItem;  // 指向画布对象的指针
     QPointF m_canvasOffset;       // 画布的位置偏移
+    // 修改状态管理
+    bool m_isModified;            // 场景是否被修改
 };
 #endif // MAINWINDOW_H
