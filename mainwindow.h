@@ -198,9 +198,9 @@ private:
     /**
      * @brief 从文件获取图片
      * @param title 对话框标题
-     * @return 图片指针
+     * @return 图片对象，如果加载失败返回空图片
      */
-    QImage* getImageFromFile(QString title);
+    QImage getImageFromFile(QString title);
 
     // 画布管理相关方法
     /**

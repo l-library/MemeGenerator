@@ -16,6 +16,8 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsDropShadowEffect>
 #include <QInputDialog>
+#include <QClipboard>
+#include <QMimeData>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
 #include "DimOutsideCanvasEffect.h"
@@ -284,7 +286,7 @@ void MainWindow::connectActionToSlot(const QString& slotName, QAction* action) {
     }
 }
 
-QImage* MainWindow::getImageFromFile(QString title)
+QImage MainWindow::getImageFromFile(QString title)
 {
     // 创建格式过滤器
     QString filter = "图片 (";
@@ -304,34 +306,25 @@ QImage* MainWindow::getImageFromFile(QString title)
     QString path = QFileDialog::getOpenFileName(this,title,".",filter);
     if(path.isEmpty()||!QFile::exists(path)){
         QMessageBox::warning(this,"warning",QString("文件打开失败！"));
-        return nullptr;
+        return QImage();
     }
-    QImage* image = new QImage;
-    if(!image->load(path))
+    QImage image;
+    if(!image.load(path))
     {
         QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
-        return nullptr;
+        return QImage();
     }
     QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
-                                                         .arg(image->size().rheight())
-                                                         .arg(image->size().rwidth())
-                                                         .arg(image->depth()));
+                                                         .arg(image.size().rheight())
+                                                         .arg(image.size().rwidth())
+                                                         .arg(image.depth()));
     return image;
 }
 
 // 槽函数实现
 void MainWindow::onNewFile() {
     // 清空现有项目
-    for (auto it = m_items.begin(); it != m_items.end(); ++it) {
-        ResizableItem* item = it.key();
-        if (item != m_canvasItem) {
-            m_graphics_scene->removeItem(item);
-            delete item;
-        }
-    }
-    m_items.clear();
-    m_selected_items.clear();
-    m_current_z_value = 0;
+    clearScene();
 
     // 重置画布到默认状态
     if (m_canvasItem) {
@@ -347,11 +340,11 @@ void MainWindow::onNewFile() {
 }
 
 void MainWindow::onOpenFile() {
-    auto image = getImageFromFile("选择要打开的文件");
-    if(!image)
+    QImage image = getImageFromFile("选择要打开的文件");
+    if(image.isNull())
         return;
     ResizableItem* pixmapItem = new ResizableItem;
-    pixmapItem->setPixmap(QPixmap::fromImage(*image));
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
 
 
     // 清理场景
@@ -365,7 +358,7 @@ void MainWindow::onOpenFile() {
     delete m_canvasItem;// 删除对象
     m_canvasItem = nullptr;
     // 创建新画布
-    createCanvas(QSizeF(image->rect().width(),image->rect().height()),0,0,Qt::white);
+    createCanvas(QSizeF(image.rect().width(),image.rect().height()),0,0,Qt::white);
 
     // 添加到场景
     addItemToScene(pixmapItem);
@@ -422,10 +415,10 @@ void MainWindow::addItemToScene(ResizableItem* item)
         // 连接信号槽（图片双击事件）
         connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
             if(target->getItemType()==ItemType::Type_Image){
-                auto image = getImageFromFile("选择要更换的图片");
-                if(!image)
+                QImage image = getImageFromFile("选择要更换的图片");
+                if(image.isNull())
                     return;
-                target->setPixmap(QPixmap::fromImage(*image));
+                target->setPixmap(QPixmap::fromImage(image));
 
             }
             else{
@@ -593,25 +586,76 @@ void MainWindow::onExit()
 }
 void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
+
 void MainWindow::onZoomIn()
 {
     m_view_scale*=1.2;
     m_graphics_view->scale(1.2,1.2);
 }
+
 void MainWindow::onZoomOut()
 {
     m_view_scale*=0.8;
     m_graphics_view->scale(0.8,0.8);
 }
-void MainWindow::onCopy(){};
-void MainWindow::onPaste(){};
+
+void MainWindow::onCopy()
+{
+    QClipboard *clipboard = QApplication::clipboard(); // 获取单例
+    if(m_selected_items.size()==0)
+        return;
+    if(m_selected_items.size()>1)
+    {
+        QMessageBox::warning(this,"警告","只能选择一个对象复制");
+        return;
+    }
+    ResizableItem* item = *m_selected_items.begin();
+    if(item->getItemType()==ItemType::Type_Canvas)
+        return;
+    else if(item->getItemType()==ItemType::Type_Image){
+        clipboard->setPixmap(item->getPixmap());
+        this->statusBar()->showMessage("复制成功！");
+    }
+    else if(item->getItemType()==ItemType::Type_Text){
+        clipboard->setText(item->getText());
+        this->statusBar()->showMessage("复制成功！");
+    }
+    else
+        return;
+}
+
+void MainWindow::onPaste()
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    const QMimeData *mime_data = clipboard->mimeData();
+    if(mime_data->hasImage())
+    {
+        ResizableItem* item = new ResizableItem;
+        QImage image = clipboard->image();
+        item->setPixmap(QPixmap::fromImage(image));
+        addItemToScene(item);
+        this->statusBar()->showMessage("粘贴成功！");
+    }
+    else if(mime_data->hasText())
+    {
+        ResizableItem* item = new ResizableItem;
+        QString text = clipboard->text();
+        item->setText(text);
+        addItemToScene(item);
+        this->statusBar()->showMessage("粘贴成功！");
+    }
+    else{
+        QMessageBox::warning(this,"警告","不支持的粘贴类型！");
+    }
+}
+
 void MainWindow::onInsertPicture()
 {
-    auto image = getImageFromFile("选择要插入的图片");
-    if(!image)
+    QImage image = getImageFromFile("选择要插入的图片");
+    if(image.isNull())
         return;
     ResizableItem* pixmapItem = new ResizableItem;
-    pixmapItem->setPixmap(QPixmap::fromImage(*image));
+    pixmapItem->setPixmap(QPixmap::fromImage(image));
     // 添加到场景
     addItemToScene(pixmapItem);
 }
@@ -829,5 +873,18 @@ void MainWindow::onUpdateCanvasSizeLabel()
 
 MainWindow::~MainWindow()
 {
+    // 清理所有动态分配的ResizableItem对象
+    clearScene();  // 删除所有非画布项目
+
+    // 删除画布项目
+    if (m_canvasItem) {
+        // 从场景中移除画布（如果还在场景中）
+        if (m_graphics_scene && m_graphics_scene->items().contains(m_canvasItem)) {
+            m_graphics_scene->removeItem(m_canvasItem);
+        }
+        delete m_canvasItem;
+        m_canvasItem = nullptr;
+    }
+
     delete ui;
 }

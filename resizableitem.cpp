@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QMenu>
 #include <QColorDialog>
+#include <QFontDialog>
 
 // 定义控制手柄的大小
 const int HANDLE_SIZE = 8;
@@ -17,7 +18,8 @@ const int MIN_SIZE = 20; // 最小尺寸
 
 ResizableItem::ResizableItem(QGraphicsItem *parent)
     : QGraphicsObject (parent), m_type(Type_Text), m_rect(0, 0, 100, 100),
-      m_textBackgroundColor(Qt::transparent), m_textColor(Qt::black), m_canvasColor(Qt::white), m_currentScale(1.0), m_handleSelected(Handle_None)
+      m_textBackgroundColor(Qt::transparent), m_textColor(Qt::black),m_textFont(QFont("宋体",20,QFont::Bold)),
+      m_canvasColor(Qt::white), m_currentScale(1.0), m_handleSelected(Handle_None)
 {
     // 允许选中和移动
     setFlags(ItemIsSelectable | ItemIsMovable | ItemSendsGeometryChanges);
@@ -87,11 +89,8 @@ void ResizableItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *opt
 
         // 绘制文字
         painter->setPen(m_textColor);
-        // 根据矩形高度动态调整字体大小，使其随整体放大而放大
-        QFont font = painter->font();
-        int fontSize = qMax(6, static_cast<int>(m_rect.height() * 0.2));
-        font.setPixelSize(fontSize);
-        painter->setFont(font);
+        // 设置字体
+        painter->setFont(m_textFont);
         painter->drawText(m_rect, Qt::AlignCenter | Qt::TextWordWrap, m_text);
     }
 
@@ -460,6 +459,7 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         QAction *changeBgColorAction = menu.addAction("更换文字背景颜色");
         QAction *changeTextColorAction = menu.addAction("更换文字颜色");
         QAction *editTextAction = menu.addAction("更改文字");
+        QAction *editTextFontAction = menu.addAction("更改字体");
         QAction *deleteAction = menu.addAction("删除");
 
         // 执行选中的动作
@@ -486,6 +486,11 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
             if (color.isValid()) {
                 setTextColor(color);
             }
+        } else if (selectedAction == editTextFontAction) {
+            // 打开字体对话框
+            bool enable = false;
+            m_textFont = QFontDialog::getFont(&enable,m_textFont,QApplication::activeWindow(),"更换字体");
+            update();
         } else if (selectedAction == editTextAction) {
             // 触发双击信号，让主窗口处理文字编辑
             emit itemDoubleClicked(this);

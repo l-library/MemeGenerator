@@ -2,6 +2,7 @@
 #define RESIZABLEITEM_H
 
 #include <QGraphicsItem>
+#include <QFont>
 
 // 手柄位置枚举
 enum HandlePosition {
@@ -188,6 +189,7 @@ private:
     QPixmap m_pixmap;
     QColor m_textBackgroundColor;  // 文本背景颜色
     QColor m_textColor;            // 文本颜色
+    QFont m_textFont;              // 文本字体
     QColor m_canvasColor;          // 画布背景颜色
     mutable qreal m_currentScale;  // 当前视图缩放因子，用于固定手柄大小
 
