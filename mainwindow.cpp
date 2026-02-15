@@ -18,6 +18,7 @@
 #include <QInputDialog>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
+#include "DimOutsideCanvasEffect.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -470,6 +471,10 @@ void MainWindow::addItemToScene(ResizableItem* item)
         connect(item, &ResizableItem::itemDoubleClicked,
                 this, &MainWindow::onCanvasDoubleClicked);
     }
+
+    // 添加效果
+    DimOutsideCanvasEffect* effect = new DimOutsideCanvasEffect(item, m_canvasItem);
+    item->setGraphicsEffect(effect);
 }
 
 void MainWindow::selectItem(ResizableItem* item)

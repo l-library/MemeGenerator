@@ -16,6 +16,7 @@ SOURCES += \
     resizableitem.cpp
 
 HEADERS += \
+    dimoutsidecanvaseffect.h \
     imagecropperdialog.h \
     imagecropperlabel.h \
     mainwindow.h \

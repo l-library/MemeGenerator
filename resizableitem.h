@@ -107,6 +107,12 @@ public:
      */
     bool isCanvas() const { return m_type == Type_Canvas; }
 
+    /**
+     * @brief 获取内容矩形（不包含选择手柄扩展）
+     * @return 内容矩形，局部坐标
+     */
+    QRectF getContentRect() const { return m_rect; }
+
 signals:
     /**
      * @brief 双击信号
