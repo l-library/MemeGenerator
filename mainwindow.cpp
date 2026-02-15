@@ -16,6 +16,8 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsDropShadowEffect>
 #include <QInputDialog>
+#include <QClipboard>
+#include <QMimeData>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
 #include "DimOutsideCanvasEffect.h"
@@ -604,7 +606,27 @@ void MainWindow::onZoomOut()
     m_graphics_view->scale(0.8,0.8);
 }
 void MainWindow::onCopy(){};
-void MainWindow::onPaste(){};
+void MainWindow::onPaste()
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    const QMimeData *mime_data = clipboard->mimeData();
+    ResizableItem* item = new ResizableItem;
+    if(mime_data->hasImage())
+    {
+        QImage image = clipboard->image();
+        item->setPixmap(QPixmap::fromImage(image));
+        addItemToScene(item);
+    }
+    else if(mime_data->hasText())
+    {
+        QString text = clipboard->text();
+        item->setText(text);
+        addItemToScene(item);
+    }
+    else{
+        QMessageBox::warning(this,"警告","不支持的粘贴类型！");
+    }
+}
 void MainWindow::onInsertPicture()
 {
     auto image = getImageFromFile("选择要插入的图片");
