@@ -595,17 +595,44 @@ void MainWindow::onExit()
 }
 void MainWindow::onUndo(){};
 void MainWindow::onRedo(){};
+
 void MainWindow::onZoomIn()
 {
     m_view_scale*=1.2;
     m_graphics_view->scale(1.2,1.2);
 }
+
 void MainWindow::onZoomOut()
 {
     m_view_scale*=0.8;
     m_graphics_view->scale(0.8,0.8);
 }
-void MainWindow::onCopy(){};
+
+void MainWindow::onCopy()
+{
+    QClipboard *clipboard = QApplication::clipboard(); // 获取单例
+    if(m_selected_items.size()==0)
+        return;
+    if(m_selected_items.size()>1)
+    {
+        QMessageBox::warning(this,"警告","只能选择一个对象复制");
+        return;
+    }
+    ResizableItem* item = *m_selected_items.begin();
+    if(item->getItemType()==ItemType::Type_Canvas)
+        return;
+    else if(item->getItemType()==ItemType::Type_Image){
+        clipboard->setPixmap(item->getPixmap());
+        this->statusBar()->showMessage("复制成功！");
+    }
+    else if(item->getItemType()==ItemType::Type_Text){
+        clipboard->setText(item->getText());
+        this->statusBar()->showMessage("复制成功！");
+    }
+    else
+        return;
+}
+
 void MainWindow::onPaste()
 {
     QClipboard *clipboard = QApplication::clipboard();
@@ -616,17 +643,20 @@ void MainWindow::onPaste()
         QImage image = clipboard->image();
         item->setPixmap(QPixmap::fromImage(image));
         addItemToScene(item);
+        this->statusBar()->showMessage("粘贴成功！");
     }
     else if(mime_data->hasText())
     {
         QString text = clipboard->text();
         item->setText(text);
         addItemToScene(item);
+        this->statusBar()->showMessage("粘贴成功！");
     }
     else{
         QMessageBox::warning(this,"警告","不支持的粘贴类型！");
     }
 }
+
 void MainWindow::onInsertPicture()
 {
     auto image = getImageFromFile("选择要插入的图片");
