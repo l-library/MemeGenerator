@@ -9,6 +9,7 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    filterdialog.cpp \
     imagecropperlabel.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -17,6 +18,7 @@ SOURCES += \
 
 HEADERS += \
     dimoutsidecanvaseffect.h \
+    filterdialog.h \
     imagecropperdialog.h \
     imagecropperlabel.h \
     mainwindow.h \
@@ -24,6 +26,7 @@ HEADERS += \
     resizableitem.h
 
 FORMS += \
+    filterdialog.ui \
     mainwindow.ui
 
 # Default rules for deployment.

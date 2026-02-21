@@ -21,6 +21,7 @@
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
 #include "DimOutsideCanvasEffect.h"
+#include "filterdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -720,13 +721,14 @@ void MainWindow::onCutting()
 }
 
 void MainWindow::onFilter(){
-    // TODO: 实现滤镜功能
+    auto filter_dialog = new FilterDialog(this);
+    filter_dialog->exec();
     // 应用滤镜后标记修改
     markModified();
 };
 void MainWindow::onAbout()
 {
-    QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v1.0</h3>"
+    QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v0.1</h3>"
             "<p>开发者：@l-library</p>"
             "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
