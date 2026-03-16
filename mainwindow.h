@@ -203,6 +203,12 @@ private:
      */
     QImage getImageFromFile(QString title);
 
+    /**
+     * @brief 获取整个场景的图像用于滤镜处理
+     * @return 场景图像，如果失败返回空图像
+     */
+    QImage getSceneImage();
+
     // 画布管理相关方法
     /**
      * @brief 创建默认画布
