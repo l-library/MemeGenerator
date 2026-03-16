@@ -182,6 +182,14 @@ protected:
      */
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
+    /**
+     * @brief Item变化通知处理
+     * @param change 变化类型
+     * @param value 变化值
+     * @return 变化后的值
+     */
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
 private:
     ItemType m_type;
     QRectF m_rect;

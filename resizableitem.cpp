@@ -168,6 +168,14 @@ void ResizableItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     QGraphicsItem::mouseReleaseEvent(event);
 }
 
+QVariant ResizableItem::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (change == ItemPositionChange || change == ItemPositionHasChanged) {
+        update();
+    }
+    return QGraphicsObject::itemChange(change, value);
+}
+
 // 双击事件实现
 void ResizableItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {

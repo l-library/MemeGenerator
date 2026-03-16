@@ -103,6 +103,8 @@ void MainWindow::initGraphicsView()
     m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag); // 局部框选开启
     m_graphics_view->setInteractive(true); // 开启交互
     m_graphics_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse); // 设置锚点
+    m_graphics_view->setCacheMode(QGraphicsView::CacheNone); // 禁用缓存避免拖拽痕迹
+    m_graphics_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate); // 拖拽时全量重绘
     m_graphics_view->setBackgroundBrush(QBrush(Qt::lightGray));
     // 设置场景背景
     // m_graphics_scene->setForegroundBrush(QBrush(Qt::white));
@@ -325,6 +327,46 @@ QImage MainWindow::getImageFromFile(QString title)
     return image;
 }
 
+QImage MainWindow::getSceneImage()
+{
+    QRectF exportRect = getCanvasExportRect();
+    if (exportRect.isEmpty()) {
+        QMessageBox::warning(this, "错误", "无法确定导出区域");
+        return QImage();
+    }
+
+    QBrush oldBackground = m_graphics_scene->backgroundBrush();
+    QBrush oldForeground = m_graphics_scene->foregroundBrush();
+    m_graphics_scene->setBackgroundBrush(Qt::NoBrush);
+    m_graphics_scene->setForegroundBrush(Qt::NoBrush);
+
+    bool canvasWasSelected = m_canvasItem && m_canvasItem->isSelected();
+    if (m_canvasItem && canvasWasSelected) {
+        m_canvasItem->setSelected(false);
+    }
+
+    QSize imageSize = exportRect.size().toSize();
+    QImage image(imageSize, QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    m_graphics_scene->render(&painter,
+                             QRectF(0, 0, imageSize.width(), imageSize.height()),
+                             exportRect);
+    painter.end();
+
+    if (m_canvasItem && canvasWasSelected) {
+        m_canvasItem->setSelected(true);
+    }
+
+    m_graphics_scene->setBackgroundBrush(oldBackground);
+    m_graphics_scene->setForegroundBrush(oldForeground);
+
+    return image;
+}
 // 槽函数实现
 void MainWindow::onNewFile() {
     // 检查是否需要保存当前修改
@@ -721,10 +763,25 @@ void MainWindow::onCutting()
 }
 
 void MainWindow::onFilter(){
-    auto filter_dialog = new FilterDialog(this);
-    filter_dialog->exec();
-    // 应用滤镜后标记修改
-    markModified();
+    QImage sceneImage = getSceneImage();
+    if (sceneImage.isNull()) {
+        return;
+    }
+
+    FilterDialog filterDialog(this);
+    filterDialog.setOriginalImage(sceneImage);
+
+    if (filterDialog.exec() == QDialog::Accepted) {
+        QImage filteredImage = filterDialog.getFilteredCopy();
+        if (!filteredImage.isNull()) {
+            ResizableItem* resultItem = new ResizableItem;
+            resultItem->setPixmap(QPixmap::fromImage(filteredImage));
+            resultItem->setPos(m_canvasItem->pos());
+            addItemToScene(resultItem);
+
+            QMessageBox::information(this, "滤镜应用", "滤镜已应用到新创建的图层中");
+        }
+    }
 };
 void MainWindow::onAbout()
 {
