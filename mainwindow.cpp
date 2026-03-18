@@ -467,6 +467,11 @@ void MainWindow::addItemToScene(ResizableItem* item)
         itemInfo.offset = offset;
         itemInfo.zValue = m_current_z_value++;
         m_items[item] = itemInfo;
+        // 连接上移下移信号
+        connect(item, &ResizableItem::moveUpSignal, this, [this](ResizableItem *target){
+        });
+        connect(item, &ResizableItem::moveDownSignal, this, [this](ResizableItem *target){
+        });
 
         // 连接信号槽（图片双击事件）
         connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
