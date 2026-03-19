@@ -464,6 +464,8 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     if (m_type == Type_Text) {
         // 文本类型菜单
+        QAction *moveUp = menu.addAction("上移至顶部");
+        QAction *moveDown = menu.addAction("下移至底部");
         QAction *changeBgColorAction = menu.addAction("更换文字背景颜色");
         QAction *changeTextColorAction = menu.addAction("更换文字颜色");
         QAction *editTextAction = menu.addAction("更改文字");
@@ -472,7 +474,12 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
         // 执行选中的动作
         QAction *selectedAction = menu.exec(event->screenPos());
-        if (selectedAction == changeBgColorAction) {
+        if(selectedAction == moveUp){
+            emit moveUpSignal(this);
+        }else if(selectedAction == moveDown){
+            emit moveDownSignal(this);
+        }
+        else if (selectedAction == changeBgColorAction) {
             // 打开颜色对话框选择背景颜色
             QColor color = QColorDialog::getColor(
                 m_textBackgroundColor,
@@ -508,13 +515,19 @@ void ResizableItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         }
     } else if (m_type == Type_Image) {
         // 图像类型菜单
+        QAction *moveUp = menu.addAction("上移至顶部");
+        QAction *moveDown = menu.addAction("下移至底部");
         QAction *changeImageAction = menu.addAction("更换图像");
         QAction *imageCropAction = menu.addAction("裁剪图像");
         QAction *deleteAction = menu.addAction("删除");
 
         // 执行选中的动作
         QAction *selectedAction = menu.exec(event->screenPos());
-        if (selectedAction == changeImageAction) {
+        if(selectedAction == moveUp){
+            emit moveUpSignal(this);
+        }else if(selectedAction == moveDown){
+            emit moveDownSignal(this);
+        }else if (selectedAction == changeImageAction) {
             // 触发双击信号，让主窗口处理图像更换
             emit itemDoubleClicked(this);
         }

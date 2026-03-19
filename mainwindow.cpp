@@ -467,6 +467,50 @@ void MainWindow::addItemToScene(ResizableItem* item)
         itemInfo.offset = offset;
         itemInfo.zValue = m_current_z_value++;
         m_items[item] = itemInfo;
+        // 连接上移下移信号
+        connect(item, &ResizableItem::moveUpSignal, this, [this](ResizableItem *target){
+            // 上移至顶部：将项目移动到所有非画布项目的顶部（最大z值）
+            if (!m_items.contains(target)) return;
+            
+            // 找到当前最大z值
+            qreal maxZValue = 0;
+            for (const auto &itemInfo : m_items) {
+                if (itemInfo.zValue > maxZValue) {
+                    maxZValue = itemInfo.zValue;
+                }
+            }
+            
+            // 将目标项目的z值设置为最大z值+1，确保在最顶层
+            m_items[target].zValue = maxZValue + 1;
+            target->setZValue(m_items[target].zValue);
+            
+            // 标记场景已被修改
+            markModified();
+        });
+        connect(item, &ResizableItem::moveDownSignal, this, [this](ResizableItem *target){
+            // 下移至底部：将项目移动到所有非画布项目的底部（最小z值，但在画布之上）
+            if (!m_items.contains(target)) return;
+            
+            // 找到当前最小z值
+            qreal minZValue = m_items[target].zValue; // 初始化为目标值
+            bool first = true;
+            for (const auto &itemInfo : m_items) {
+                if (first) {
+                    minZValue = itemInfo.zValue;
+                    first = false;
+                } else if (itemInfo.zValue < minZValue) {
+                    minZValue = itemInfo.zValue;
+                }
+            }
+            
+            // 将目标项目的z值设置为最小z值-1，确保在最底层（但在画布之上）
+            // 画布的z值是-1000，所以普通项目最小z值应该大于-1000
+            m_items[target].zValue = minZValue - 1;
+            target->setZValue(m_items[target].zValue);
+            
+            // 标记场景已被修改
+            markModified();
+        });
 
         // 连接信号槽（图片双击事件）
         connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
@@ -554,9 +598,6 @@ void MainWindow::selectItem(ResizableItem* item)
 
     item->setSelected(true);
     m_selected_items.insert(item);
-
-    // 高亮显示选中项
-    // item->setGraphicsEffect(new QGraphicsDropShadowEffect());
 }
 
 void MainWindow::deselectAll()

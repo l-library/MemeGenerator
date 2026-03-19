@@ -145,6 +145,17 @@ signals:
      * @param item 请求更改画布大小的项指针
      */
     void changeCanvasSize(ResizableItem *item);
+    /**
+     * @brief 将选中的item上移一层
+     * @param item 请求变化位置项指针
+     */
+    void moveUpSignal(ResizableItem *item);
+    /**
+     * @brief 将选中的item下移一层
+     * @param item 请求变化位置的项指针
+     */
+    void moveDownSignal(ResizableItem *item);
+
 
 protected:
     /**
