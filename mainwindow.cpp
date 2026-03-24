@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "menuconfig.h"
+#include "commands.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
@@ -25,10 +26,7 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
-     m_grid_layout(nullptr),m_graphics_scene(nullptr)
-    , m_graphics_view(nullptr), m_current_z_value(0)
-    ,m_view_scale(1.0), m_editMode(NormalMode), m_canvasItem(nullptr)
-    ,m_canvasOffset(0,0), m_isModified(false)
+      m_grid_layout(nullptr), m_graphics_scene(nullptr), m_graphics_view(nullptr), m_current_z_value(0), m_view_scale(1.0), m_editMode(NormalMode), m_canvasItem(nullptr), m_canvasOffset(0, 0), m_isModified(false), m_undoStack(new QUndoStack(this)), m_isUndoRedoing(false)
 {
     ui->setupUi(this);
 
@@ -45,14 +43,15 @@ MainWindow::MainWindow(QWidget *parent)
     initMenuBar();
 
     // 创建网格布局
-    m_grid_layout= new QGridLayout(this);
+    m_grid_layout = new QGridLayout(this);
     // 设置行和列的比例
-    for(int i=0;i<10;++i){
-    m_grid_layout->setRowStretch(i, 10);  // 将行均分为10份
+    for (int i = 0; i < 10; ++i)
+    {
+        m_grid_layout->setRowStretch(i, 10); // 将行均分为10份
     }
-    m_grid_layout->setColumnStretch(0, 20);  // 第一列占20%
-    m_grid_layout->setColumnStretch(1, 60);  // 第二列占60%
-    m_grid_layout->setColumnStretch(2, 20);  // 第三列占20%
+    m_grid_layout->setColumnStretch(0, 20); // 第一列占20%
+    m_grid_layout->setColumnStretch(1, 60); // 第二列占60%
+    m_grid_layout->setColumnStretch(2, 20); // 第三列占20%
     m_grid_layout->setSpacing(0);
     m_grid_layout->setContentsMargins(0, 0, 0, 0);
     setCentralWidget(new QWidget(this));
@@ -65,15 +64,14 @@ MainWindow::MainWindow(QWidget *parent)
     // 设置状态栏
     this->statusBar()->setStyleSheet(
         "QStatusBar {"
-        "   border-top: 1px solid #B0B0B0;"  /* 顶部添加 1px 的灰色实线 */
-        "   background-color: #F5F5F5;"      /* 背景色稍微改浅灰，与白色视图区分 */
-        "}"
-        );
+        "   border-top: 1px solid #B0B0B0;" /* 顶部添加 1px 的灰色实线 */
+        "   background-color: #F5F5F5;"     /* 背景色稍微改浅灰，与白色视图区分 */
+        "}");
     statusBar()->showMessage("准备就绪");
     // 画布大小状态显示
     QSizeF size = m_canvasItem->getCanvasSize();
     QString message = QString("当前画布大小: %1 * %2  ").arg(size.width()).arg(size.height());
-    m_canvasSizeLabel = new QLabel(message,this);
+    m_canvasSizeLabel = new QLabel(message, this);
     // 将初始化的标签添加到底部状态栏上
     statusBar()->addPermanentWidget(m_canvasSizeLabel);
 
@@ -84,7 +82,8 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowModified(false);
 }
 
-void MainWindow::initMenuBar() {
+void MainWindow::initMenuBar()
+{
     createMenuFromConfig();
 }
 
@@ -96,14 +95,14 @@ void MainWindow::initGraphicsView()
     m_graphics_view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_graphics_view->setScene(m_graphics_scene);
     // 添加view到布局
-    m_grid_layout->addWidget(m_graphics_view,0,0,10,2);
+    m_grid_layout->addWidget(m_graphics_view, 0, 0, 10, 2);
     // 设置视图属性
-    m_graphics_view->setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
-    m_graphics_view->setRenderHint(QPainter::SmoothPixmapTransform); // 光滑像素
-    m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag); // 局部框选开启
-    m_graphics_view->setInteractive(true); // 开启交互
+    m_graphics_view->setRenderHint(QPainter::Antialiasing);                    // 开启抗锯齿
+    m_graphics_view->setRenderHint(QPainter::SmoothPixmapTransform);           // 光滑像素
+    m_graphics_view->setDragMode(QGraphicsView::RubberBandDrag);               // 局部框选开启
+    m_graphics_view->setInteractive(true);                                     // 开启交互
     m_graphics_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse); // 设置锚点
-    m_graphics_view->setCacheMode(QGraphicsView::CacheNone); // 禁用缓存避免拖拽痕迹
+    m_graphics_view->setCacheMode(QGraphicsView::CacheNone);                   // 禁用缓存避免拖拽痕迹
     m_graphics_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate); // 拖拽时全量重绘
     m_graphics_view->setBackgroundBrush(QBrush(Qt::lightGray));
     // 设置场景背景
@@ -116,86 +115,87 @@ void MainWindow::initGraphicsView()
 void MainWindow::initButton()
 {
     // 画布编辑模式切换按钮
-    QPushButton* canvasEditButton = new QPushButton(this);
+    QPushButton *canvasEditButton = new QPushButton(this);
     canvasEditButton->setText("画布编辑");
     canvasEditButton->setStatusTip("切换画布编辑模式 (Ctrl+E)");
     canvasEditButton->setIcon(QIcon(":/icons/canvas.png"));
     canvasEditButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     canvasEditButton->setCheckable(true);
     canvasEditButton->setChecked(false);
-    connect(canvasEditButton, &QPushButton::toggled, [this](bool checked) {
-        setEditMode(checked ? CanvasEditMode : NormalMode);
-    });
+    connect(canvasEditButton, &QPushButton::toggled, [this](bool checked)
+            { setEditMode(checked ? CanvasEditMode : NormalMode); });
     canvasEditButton->setShortcut(QKeySequence("Ctrl+E"));
-    m_grid_layout->addWidget(canvasEditButton,0,2);
+    m_grid_layout->addWidget(canvasEditButton, 0, 2);
 
     // 打开文件按钮
-    QPushButton* file_open_btn = new QPushButton(this);
+    QPushButton *file_open_btn = new QPushButton(this);
     file_open_btn->setText("打开文件");
     file_open_btn->setStatusTip("选择一个图片文件打开，自动调整画布(Ctrl+O)");
     file_open_btn->setIcon(QIcon(":/icons/fileopen.png"));
     file_open_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    connect(file_open_btn, &QPushButton::pressed, [=]() {
-        onOpenFile();
-    });
-    m_grid_layout->addWidget(file_open_btn,1,2);
+    connect(file_open_btn, &QPushButton::pressed, [=]()
+            { onOpenFile(); });
+    m_grid_layout->addWidget(file_open_btn, 1, 2);
 
     // 插入图片按钮
-    QPushButton* insert_picture_btn = new QPushButton(this);
+    QPushButton *insert_picture_btn = new QPushButton(this);
     insert_picture_btn->setText("插入图片");
     insert_picture_btn->setStatusTip("从文件中选择图片插入(Ctrl+I)");
     insert_picture_btn->setIcon(QIcon(":/icons/insertpicture.png"));
     insert_picture_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    connect(insert_picture_btn, &QPushButton::pressed, [=]() {
-        onInsertPicture();
-    });
-    m_grid_layout->addWidget(insert_picture_btn,2,2);
+    connect(insert_picture_btn, &QPushButton::pressed, [=]()
+            { onInsertPicture(); });
+    m_grid_layout->addWidget(insert_picture_btn, 2, 2);
 
     // 插入文本按钮
-    QPushButton* insert_text_btn = new QPushButton(this);
+    QPushButton *insert_text_btn = new QPushButton(this);
     insert_text_btn->setText("插入文本");
     insert_text_btn->setStatusTip("插入一个文本框(Ctrl+T)");
     insert_text_btn->setIcon(QIcon(":/icons/inserttext.png"));
     insert_text_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    connect(insert_text_btn, &QPushButton::pressed, [=]() {
-        onInsertText();
-    });
-    m_grid_layout->addWidget(insert_text_btn,3,2);
+    connect(insert_text_btn, &QPushButton::pressed, [=]()
+            { onInsertText(); });
+    m_grid_layout->addWidget(insert_text_btn, 3, 2);
 
     // 导出按钮
-    QPushButton* save_file_button = new QPushButton(this);
+    QPushButton *save_file_button = new QPushButton(this);
     save_file_button->setText("导出");
     save_file_button->setStatusTip("将当前视图导出为图片(Ctrl+S)");
     save_file_button->setIcon(QIcon(":/icons/export.png"));
     save_file_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    connect(save_file_button, &QPushButton::pressed, [=]() {
-        onSaveAsFile();
-    });
+    connect(save_file_button, &QPushButton::pressed, [=]()
+            { onSaveAsFile(); });
     // 设置按钮的文字颜色和背景色
     save_file_button->setStyleSheet("color: black; background-color: #FFFD55;");
-    m_grid_layout->addWidget(save_file_button,8,2,10,2);
+    m_grid_layout->addWidget(save_file_button, 8, 2, 10, 2);
 }
 
-void MainWindow::loadMenuConfig() {
+void MainWindow::loadMenuConfig()
+{
     // 从资源文件加载配置
     QString configPath = ":/config/MenuConfig.json";
     m_menuConfigs = MenuConfigManager::loadFromJson(configPath);
 
-    if (m_menuConfigs.isEmpty()) {
+    if (m_menuConfigs.isEmpty())
+    {
         // 如果配置文件加载失败，使用默认配置
         setupDefaultMenuConfig();
     }
 }
 
-void MainWindow::createMenuFromConfig() {
+void MainWindow::createMenuFromConfig()
+{
     QMenuBar *menuBar = this->menuBar();
 
-    for (long long i=0;i<m_menuConfigs.size();++i) {
-        const MenuConfig& menuConfig = m_menuConfigs[i];
+    for (long long i = 0; i < m_menuConfigs.size(); ++i)
+    {
+        const MenuConfig &menuConfig = m_menuConfigs[i];
         QMenu *menu = new QMenu(menuConfig.title, this);
 
-        for (const MenuItemConfig& itemConfig : menuConfig.items) {
-            if (itemConfig.separator) {
+        for (const MenuItemConfig &itemConfig : menuConfig.items)
+        {
+            if (itemConfig.separator)
+            {
                 menu->addSeparator();
                 continue;
             }
@@ -207,18 +207,23 @@ void MainWindow::createMenuFromConfig() {
             action->setText(itemConfig.text);
 
             // 设置图标
-            if (!itemConfig.iconPath.isEmpty()) {
+            if (!itemConfig.iconPath.isEmpty())
+            {
                 action->setIcon(QIcon(itemConfig.iconPath));
             }
 
             // 设置快捷键
-            if (!itemConfig.standardKey.isEmpty()) {
+            if (!itemConfig.standardKey.isEmpty())
+            {
                 QKeySequence::StandardKey standardKey =
                     MenuConfigManager::stringToStandardKey(itemConfig.standardKey);
-                if (standardKey != QKeySequence::UnknownKey) {
+                if (standardKey != QKeySequence::UnknownKey)
+                {
                     action->setShortcut(standardKey);
                 }
-            } else if (!itemConfig.shortcut.isEmpty()) {
+            }
+            else if (!itemConfig.shortcut.isEmpty())
+            {
                 action->setShortcut(QKeySequence(itemConfig.shortcut));
             }
 
@@ -235,11 +240,13 @@ void MainWindow::createMenuFromConfig() {
             menu->addAction(action);
 
             // 保存到映射表
-            if (!itemConfig.id.isEmpty()) {
+            if (!itemConfig.id.isEmpty())
+            {
                 m_actionMap[itemConfig.id] = action;
 
                 // 连接信号槽
-                if (!itemConfig.slot.isEmpty()) {
+                if (!itemConfig.slot.isEmpty())
+                {
                     connectActionToSlot(itemConfig.slot, action);
                 }
             }
@@ -250,44 +257,82 @@ void MainWindow::createMenuFromConfig() {
     }
 }
 
-void MainWindow::connectActionToSlot(const QString& slotName, QAction* action) {
-    if (slotName == "onNewFile") {
+void MainWindow::connectActionToSlot(const QString &slotName, QAction *action)
+{
+    if (slotName == "onNewFile")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onNewFile);
-    } else if (slotName == "onOpenFile") {
+    }
+    else if (slotName == "onOpenFile")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onOpenFile);
-    } else if (slotName == "onSaveFile") {
+    }
+    else if (slotName == "onSaveFile")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onSaveFile);
-    } else if (slotName == "onSaveAsFile") {
+    }
+    else if (slotName == "onSaveAsFile")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onSaveAsFile);
-    } else if (slotName == "onExit") {
+    }
+    else if (slotName == "onExit")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onExit);
-    } else if (slotName == "onUndo") {
+    }
+    else if (slotName == "onUndo")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onUndo);
-    } else if (slotName == "onRedo") {
+    }
+    else if (slotName == "onRedo")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onRedo);
-    }else if (slotName == "onZoomIn") {
+    }
+    else if (slotName == "onZoomIn")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onZoomIn);
-    }else if (slotName == "onZoomOut") {
+    }
+    else if (slotName == "onZoomOut")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onZoomOut);
-    }else if (slotName == "onCopy") {
+    }
+    else if (slotName == "onCopy")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onCopy);
-    }else if (slotName == "onPaste") {
+    }
+    else if (slotName == "onPaste")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onPaste);
-    }else if (slotName == "onInsertPicture") {
+    }
+    else if (slotName == "onInsertPicture")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onInsertPicture);
-    }else if (slotName == "onInsertText") {
+    }
+    else if (slotName == "onInsertText")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onInsertText);
-    }else if (slotName == "onCutting") {
+    }
+    else if (slotName == "onCutting")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onCutting);
-    }else if (slotName == "onFilter") {
+    }
+    else if (slotName == "onFilter")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onFilter);
-    }else if (slotName == "onAbout") {
+    }
+    else if (slotName == "onAbout")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onAbout);
-    }else if (slotName == "onToggleCanvasEditMode") {
+    }
+    else if (slotName == "onToggleCanvasEditMode")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onToggleCanvasEditMode);
-    }else if (slotName == "onSetCanvasSize") {
+    }
+    else if (slotName == "onSetCanvasSize")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onSetCanvasSize);
-    }else if (slotName == "onResetCanvas") {
+    }
+    else if (slotName == "onResetCanvas")
+    {
         connect(action, &QAction::triggered, this, &MainWindow::onResetCanvas);
     }
 }
@@ -297,7 +342,8 @@ QImage MainWindow::getImageFromFile(QString title)
     // 创建格式过滤器
     QString filter = "图片 (";
     QList<QByteArray> formats = QImageReader::supportedImageFormats();
-    for (int i = 0; i < formats.size(); ++i) {
+    for (int i = 0; i < formats.size(); ++i)
+    {
         filter += "*." + QString(formats[i]) + " ";
     }
     filter += ");;";
@@ -309,28 +355,27 @@ QImage MainWindow::getImageFromFile(QString title)
               "GIF (*.gif);;"
               "TIFF (*.tif *.tiff);;"
               "所有文件 (*.*)";
-    QString path = QFileDialog::getOpenFileName(this,title,".",filter);
-    if(path.isEmpty()||!QFile::exists(path)){
-        QMessageBox::warning(this,"warning",QString("文件打开失败！"));
+    QString path = QFileDialog::getOpenFileName(this, title, ".", filter);
+    if (path.isEmpty() || !QFile::exists(path))
+    {
+        QMessageBox::warning(this, "warning", QString("文件打开失败！"));
         return QImage();
     }
     QImage image;
-    if(!image.load(path))
+    if (!image.load(path))
     {
-        QMessageBox::warning(this,"warning",QString("路径：%1文件打开失败！").arg(path));
+        QMessageBox::warning(this, "warning", QString("路径：%1文件打开失败！").arg(path));
         return QImage();
     }
-    QMessageBox::information(this,"图像加载成功！",QString("长：%1\n宽：%2\n深度：%3位\t\t")
-                                                         .arg(image.size().rheight())
-                                                         .arg(image.size().rwidth())
-                                                         .arg(image.depth()));
+    QMessageBox::information(this, "图像加载成功！", QString("长：%1\n宽：%2\n深度：%3位\t\t").arg(image.size().rheight()).arg(image.size().rwidth()).arg(image.depth()));
     return image;
 }
 
 QImage MainWindow::getSceneImage()
 {
     QRectF exportRect = getCanvasExportRect();
-    if (exportRect.isEmpty()) {
+    if (exportRect.isEmpty())
+    {
         QMessageBox::warning(this, "错误", "无法确定导出区域");
         return QImage();
     }
@@ -341,7 +386,8 @@ QImage MainWindow::getSceneImage()
     m_graphics_scene->setForegroundBrush(Qt::NoBrush);
 
     bool canvasWasSelected = m_canvasItem && m_canvasItem->isSelected();
-    if (m_canvasItem && canvasWasSelected) {
+    if (m_canvasItem && canvasWasSelected)
+    {
         m_canvasItem->setSelected(false);
     }
 
@@ -358,7 +404,8 @@ QImage MainWindow::getSceneImage()
                              exportRect);
     painter.end();
 
-    if (m_canvasItem && canvasWasSelected) {
+    if (m_canvasItem && canvasWasSelected)
+    {
         m_canvasItem->setSelected(true);
     }
 
@@ -368,7 +415,8 @@ QImage MainWindow::getSceneImage()
     return image;
 }
 // 槽函数实现
-void MainWindow::onNewFile() {
+void MainWindow::onNewFile()
+{
     // 检查是否需要保存当前修改
     if (!maybeSave())
         return;
@@ -377,9 +425,12 @@ void MainWindow::onNewFile() {
     clearScene();
 
     // 重置画布到默认状态
-    if (m_canvasItem) {
+    if (m_canvasItem)
+    {
         onResetCanvas();
-    } else {
+    }
+    else
+    {
         createDefaultCanvas();
     }
 
@@ -390,30 +441,30 @@ void MainWindow::onNewFile() {
     // resetModified();
 }
 
-void MainWindow::onOpenFile() {
+void MainWindow::onOpenFile()
+{
     // 检查是否需要保存当前修改
     if (!maybeSave())
         return;
 
     QImage image = getImageFromFile("选择要打开的文件");
-    if(image.isNull())
+    if (image.isNull())
         return;
-    ResizableItem* pixmapItem = new ResizableItem;
+    ResizableItem *pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(image));
-
 
     // 清理场景
     clearScene();
 
     // 设置画布大小
     // 删除旧画布
-    m_selected_items.remove(m_canvasItem);// 从选中集合中移除
-    m_items.remove(m_canvasItem);// 从物品映射中移除
-    m_graphics_scene->removeItem(m_canvasItem);// 从场景中移除
-    delete m_canvasItem;// 删除对象
+    m_selected_items.remove(m_canvasItem);      // 从选中集合中移除
+    m_items.remove(m_canvasItem);               // 从物品映射中移除
+    m_graphics_scene->removeItem(m_canvasItem); // 从场景中移除
+    delete m_canvasItem;                        // 删除对象
     m_canvasItem = nullptr;
     // 创建新画布
-    createCanvas(QSizeF(image.rect().width(),image.rect().height()),0,0,Qt::white);
+    createCanvas(QSizeF(image.rect().width(), image.rect().height()), 0, 0, Qt::white);
 
     // 添加到场景
     addItemToScene(pixmapItem);
@@ -424,174 +475,26 @@ void MainWindow::onOpenFile() {
 }
 
 // 将图片添加到场景
-void MainWindow::addItemToScene(ResizableItem* item)
+void MainWindow::addItemToScene(ResizableItem *item)
 {
-    if(!item)
+    if (!item)
         return;
 
-    // 如果是画布，特殊处理
-    if (item->isCanvas()) {
-        m_canvasItem = item;
-        item->setZValue(-1000);  // 确保在底层
-
-        // 根据当前编辑模式设置画布属性
-        bool canvasEditable = (m_editMode == CanvasEditMode);
-        item->setFlag(QGraphicsItem::ItemIsMovable, canvasEditable);
-        item->setFlag(QGraphicsItem::ItemIsSelectable, canvasEditable);
-    } else {
-        // 根据当前编辑模式设置项目属性
-        if (m_editMode == CanvasEditMode) {
-            // 非画布项目在画布编辑模式下不可编辑
-            item->setFlag(QGraphicsItem::ItemIsMovable, false);
-            item->setFlag(QGraphicsItem::ItemIsSelectable, false);
-        } else {
-            item->setFlag(QGraphicsItem::ItemIsMovable, true);
-            item->setFlag(QGraphicsItem::ItemIsSelectable, true);
-        }
+    if (item->isCanvas())
+    {
+        addItemToSceneDirectly(item);
     }
-
-    item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true); // 启用位置变化通知
-    item->setAcceptHoverEvents(true); // 鼠标悬停事件
-
-    // 设置位置（在已存在item的基础上偏移）
-    QPointF offset = m_canvasOffset + QPointF(m_items.size() * 20,m_items.size() * 20);  // 每次偏移20像素
-    item->setPos(offset);
-
-    // 添加到场景
-    m_graphics_scene->addItem(item);
-
-    // 如果不是画布，保存物品信息到映射表
-    if (!item->isCanvas()) {
-        Item itemInfo;
-        itemInfo.pixmapItem = item;
-        itemInfo.offset = offset;
-        itemInfo.zValue = m_current_z_value++;
-        m_items[item] = itemInfo;
-        // 连接上移下移信号
-        connect(item, &ResizableItem::moveUpSignal, this, [this](ResizableItem *target){
-            // 上移至顶部：将项目移动到所有非画布项目的顶部（最大z值）
-            if (!m_items.contains(target)) return;
-            
-            // 找到当前最大z值
-            qreal maxZValue = 0;
-            for (const auto &itemInfo : m_items) {
-                if (itemInfo.zValue > maxZValue) {
-                    maxZValue = itemInfo.zValue;
-                }
-            }
-            
-            // 将目标项目的z值设置为最大z值+1，确保在最顶层
-            m_items[target].zValue = maxZValue + 1;
-            target->setZValue(m_items[target].zValue);
-            
-            // 标记场景已被修改
-            markModified();
-        });
-        connect(item, &ResizableItem::moveDownSignal, this, [this](ResizableItem *target){
-            // 下移至底部：将项目移动到所有非画布项目的底部（最小z值，但在画布之上）
-            if (!m_items.contains(target)) return;
-            
-            // 找到当前最小z值
-            qreal minZValue = m_items[target].zValue; // 初始化为目标值
-            bool first = true;
-            for (const auto &itemInfo : m_items) {
-                if (first) {
-                    minZValue = itemInfo.zValue;
-                    first = false;
-                } else if (itemInfo.zValue < minZValue) {
-                    minZValue = itemInfo.zValue;
-                }
-            }
-            
-            // 将目标项目的z值设置为最小z值-1，确保在最底层（但在画布之上）
-            // 画布的z值是-1000，所以普通项目最小z值应该大于-1000
-            m_items[target].zValue = minZValue - 1;
-            target->setZValue(m_items[target].zValue);
-            
-            // 标记场景已被修改
-            markModified();
-        });
-
-        // 连接信号槽（图片双击事件）
-        connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target){
-            if(target->getItemType()==ItemType::Type_Image){
-                QImage image = getImageFromFile("选择要更换的图片");
-                if(image.isNull())
-                    return;
-                target->setPixmap(QPixmap::fromImage(image));
-                // 标记场景已被修改
-                markModified();
-            }
-            else{
-                bool ok;
-                // 弹出标准输入对话框
-                QString newText = QInputDialog::getText(this, "编辑文本",
-                                                        "请输入新内容:",
-                                                        QLineEdit::Normal,
-                                                        target->getText(), &ok);
-                if (ok && !newText.isEmpty()) {
-                    target->setText(newText);
-                    // 标记场景已被修改
-                    markModified();
-                }
-            }
-            }
-        );
-
-        // 裁剪请求信号
-        connect(item,&ResizableItem::imageCropRequested,this,[this](ResizableItem *target){
-            auto image = ImageCropperDialog::getCroppedImage(target->getPixmap(),1024,576,CropperShape::RECT);
-            if(!image.isNull()) {
-                target->setPixmap(image);
-                // 标记场景已被修改
-                markModified();
-            }
-        });// 发送信号端已经确保了item是图片
-
-        // 连接删除请求信号
-        connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target){
-            // 从选中集合中移除
-            m_selected_items.remove(target);
-
-            // 从物品映射中移除
-            m_items.remove(target);
-
-            // 从场景中移除
-            m_graphics_scene->removeItem(target);
-
-            // 删除对象
-            delete target;
-            // 标记场景已被修改
-            markModified();
-        });
-
-        // 连接大小和位置变化信号，标记修改
-        connect(item, &ResizableItem::sizeChanged, this, [this](ResizableItem*){
-            markModified();
-        });
-        connect(item, &ResizableItem::positionChanged, this, [this](ResizableItem*){
-            markModified();
-        });
-
-        // 选中新添加的物品
-        selectItem(item);
-        // 标记场景已被修改
-        markModified();
-    } else {
-        // 如果是画布，连接画布双击信号
-        connect(item, &ResizableItem::itemDoubleClicked,
-                this, &MainWindow::onCanvasDoubleClicked);
+    else
+    {
+        pushCommand(new AddItemCommand(this, item));
     }
-
-    // 添加效果
-    DimOutsideCanvasEffect* effect = new DimOutsideCanvasEffect(item, m_canvasItem);
-    item->setGraphicsEffect(effect);
 }
 
-void MainWindow::selectItem(ResizableItem* item)
+void MainWindow::selectItem(ResizableItem *item)
 {
-    if (!item || (item->isCanvas() && m_editMode != CanvasEditMode)) {
-        return;  // 画布在非编辑模式下不可选中
+    if (!item || (item->isCanvas() && m_editMode != CanvasEditMode))
+    {
+        return; // 画布在非编辑模式下不可选中
     }
 
     deselectAll();
@@ -602,8 +505,10 @@ void MainWindow::selectItem(ResizableItem* item)
 
 void MainWindow::deselectAll()
 {
-    for (ResizableItem* item : m_selected_items) {
-        if (item != m_canvasItem || m_editMode == CanvasEditMode) {
+    for (ResizableItem *item : m_selected_items)
+    {
+        if (item != m_canvasItem || m_editMode == CanvasEditMode)
+        {
             item->setSelected(false);
             // item->setGraphicsEffect(nullptr);
         }
@@ -625,7 +530,8 @@ void MainWindow::save(QString title)
 {
     // 获取导出区域
     QRectF exportRect = getCanvasExportRect();
-    if (exportRect.isEmpty()) {
+    if (exportRect.isEmpty())
+    {
         QMessageBox::warning(this, "错误", "无法确定导出区域");
         return;
     }
@@ -638,7 +544,8 @@ void MainWindow::save(QString title)
 
     // 临时隐藏画布选择边框（如果选中）
     bool canvasWasSelected = m_canvasItem && m_canvasItem->isSelected();
-    if (m_canvasItem && canvasWasSelected) {
+    if (m_canvasItem && canvasWasSelected)
+    {
         m_canvasItem->setSelected(false);
     }
 
@@ -654,12 +561,13 @@ void MainWindow::save(QString title)
 
     // 渲染场景到图像，只渲染画布区域
     m_graphics_scene->render(&painter,
-                             QRectF(0, 0, imageSize.width(), imageSize.height()),  // 目标矩形
-                             exportRect);  // 源矩形（画布区域）
+                             QRectF(0, 0, imageSize.width(), imageSize.height()), // 目标矩形
+                             exportRect);                                         // 源矩形（画布区域）
     painter.end();
 
     // 恢复画布选择状态
-    if (m_canvasItem && canvasWasSelected) {
+    if (m_canvasItem && canvasWasSelected)
+    {
         m_canvasItem->setSelected(true);
     }
 
@@ -668,7 +576,7 @@ void MainWindow::save(QString title)
     m_graphics_scene->setForegroundBrush(oldForeground);
 
     // 创建格式过滤器
-    QString filter = "PNG (*.png);;";  // PNG支持透明度
+    QString filter = "PNG (*.png);;"; // PNG支持透明度
     filter += "JPEG (*.jpg *.jpeg);;"
               "BMP (*.bmp);;"
               "GIF (*.gif);;"
@@ -677,12 +585,16 @@ void MainWindow::save(QString title)
 
     // 保存文件
     QString path = QFileDialog::getSaveFileName(this, title, "/untitled", filter);
-    if (!path.isEmpty()) {
+    if (!path.isEmpty())
+    {
         // 根据文件扩展名选择保存格式
-        if (path.endsWith(".png", Qt::CaseInsensitive)) {
+        if (path.endsWith(".png", Qt::CaseInsensitive))
+        {
             image.save(path, "PNG");
-        } else if (path.endsWith(".jpg", Qt::CaseInsensitive) ||
-                   path.endsWith(".jpeg", Qt::CaseInsensitive)) {
+        }
+        else if (path.endsWith(".jpg", Qt::CaseInsensitive) ||
+                 path.endsWith(".jpeg", Qt::CaseInsensitive))
+        {
             // JPEG不支持透明度，需要填充白色背景
             QImage jpegImage(imageSize, QImage::Format_RGB32);
             jpegImage.fill(Qt::white);
@@ -690,7 +602,9 @@ void MainWindow::save(QString title)
             jpegPainter.drawImage(0, 0, image);
             jpegPainter.end();
             jpegImage.save(path, "JPEG");
-        } else {
+        }
+        else
+        {
             image.save(path);
         }
         // 保存成功，重置修改状态
@@ -701,39 +615,54 @@ void MainWindow::onExit()
 {
     this->close();
 }
-void MainWindow::onUndo(){};
-void MainWindow::onRedo(){};
+void MainWindow::onUndo()
+{
+    if (m_undoStack && m_undoStack->canUndo())
+    {
+        m_undoStack->undo();
+    }
+}
+
+void MainWindow::onRedo()
+{
+    if (m_undoStack && m_undoStack->canRedo())
+    {
+        m_undoStack->redo();
+    }
+}
 
 void MainWindow::onZoomIn()
 {
-    m_view_scale*=1.2;
-    m_graphics_view->scale(1.2,1.2);
+    m_view_scale *= 1.2;
+    m_graphics_view->scale(1.2, 1.2);
 }
 
 void MainWindow::onZoomOut()
 {
-    m_view_scale*=0.8;
-    m_graphics_view->scale(0.8,0.8);
+    m_view_scale *= 0.8;
+    m_graphics_view->scale(0.8, 0.8);
 }
 
 void MainWindow::onCopy()
 {
     QClipboard *clipboard = QApplication::clipboard(); // 获取单例
-    if(m_selected_items.size()==0)
+    if (m_selected_items.size() == 0)
         return;
-    if(m_selected_items.size()>1)
+    if (m_selected_items.size() > 1)
     {
-        QMessageBox::warning(this,"警告","只能选择一个对象复制");
+        QMessageBox::warning(this, "警告", "只能选择一个对象复制");
         return;
     }
-    ResizableItem* item = *m_selected_items.begin();
-    if(item->getItemType()==ItemType::Type_Canvas)
+    ResizableItem *item = *m_selected_items.begin();
+    if (item->getItemType() == ItemType::Type_Canvas)
         return;
-    else if(item->getItemType()==ItemType::Type_Image){
+    else if (item->getItemType() == ItemType::Type_Image)
+    {
         clipboard->setPixmap(item->getPixmap());
         this->statusBar()->showMessage("复制成功！");
     }
-    else if(item->getItemType()==ItemType::Type_Text){
+    else if (item->getItemType() == ItemType::Type_Text)
+    {
         clipboard->setText(item->getText());
         this->statusBar()->showMessage("复制成功！");
     }
@@ -745,77 +674,84 @@ void MainWindow::onPaste()
 {
     QClipboard *clipboard = QApplication::clipboard();
     const QMimeData *mime_data = clipboard->mimeData();
-    if(mime_data->hasImage())
+    if (mime_data->hasImage())
     {
-        ResizableItem* item = new ResizableItem;
+        ResizableItem *item = new ResizableItem;
         QImage image = clipboard->image();
         item->setPixmap(QPixmap::fromImage(image));
         addItemToScene(item);
         this->statusBar()->showMessage("粘贴成功！");
     }
-    else if(mime_data->hasText())
+    else if (mime_data->hasText())
     {
-        ResizableItem* item = new ResizableItem;
+        ResizableItem *item = new ResizableItem;
         QString text = clipboard->text();
         item->setText(text);
         addItemToScene(item);
         this->statusBar()->showMessage("粘贴成功！");
     }
-    else{
-        QMessageBox::warning(this,"警告","不支持的粘贴类型！");
+    else
+    {
+        QMessageBox::warning(this, "警告", "不支持的粘贴类型！");
     }
 }
 
 void MainWindow::onInsertPicture()
 {
     QImage image = getImageFromFile("选择要插入的图片");
-    if(image.isNull())
+    if (image.isNull())
         return;
-    ResizableItem* pixmapItem = new ResizableItem;
+    ResizableItem *pixmapItem = new ResizableItem;
     pixmapItem->setPixmap(QPixmap::fromImage(image));
     // 添加到场景
     addItemToScene(pixmapItem);
 }
 void MainWindow::onInsertText()
 {
-    ResizableItem* text = new ResizableItem;
+    ResizableItem *text = new ResizableItem;
     text->setText("双击以输入文本");
     addItemToScene(text);
 }
 
 void MainWindow::onCutting()
 {
-    if(m_selected_items.size()!=1)
+    if (m_selected_items.size() != 1)
     {
-        QMessageBox::warning(this,"错误","只能裁剪一个选中的图片");
+        QMessageBox::warning(this, "错误", "只能裁剪一个选中的图片");
         return;
     }
-    if((*m_selected_items.begin())->getItemType()!=ItemType::Type_Image)
+    if ((*m_selected_items.begin())->getItemType() != ItemType::Type_Image)
     {
-        QMessageBox::warning(this,"错误","无法裁剪非图片");
+        QMessageBox::warning(this, "错误", "无法裁剪非图片");
         return;
     }
-    auto image = ImageCropperDialog::getCroppedImage((*m_selected_items.begin())->getPixmap(),1024,576,CropperShape::RECT);
-    if(!image.isNull()) {
-        (*m_selected_items.begin())->setPixmap(image);
-        // 标记场景已被修改
-        markModified();
+    ResizableItem *target = *m_selected_items.begin();
+    auto image = ImageCropperDialog::getCroppedImage(target->getPixmap(), 1024, 576, CropperShape::RECT);
+    if (!image.isNull())
+    {
+        QPixmap oldPixmap = target->getPixmap();
+        QPixmap newPixmap = image;
+        pushCommand(new ChangePixmapCommand(this, target, oldPixmap, newPixmap));
     }
 }
 
-void MainWindow::onFilter(){
+void MainWindow::onFilter()
+{
     QImage sceneImage = getSceneImage();
-    if (sceneImage.isNull()) {
+    if (sceneImage.isNull())
+    {
         return;
     }
 
     FilterDialog filterDialog(this);
     filterDialog.setOriginalImage(sceneImage);
 
-    if (filterDialog.exec() == QDialog::Accepted) {
+    if (filterDialog.exec() == QDialog::Accepted)
+    {
         QImage filteredImage = filterDialog.getFilteredCopy();
-        if (!filteredImage.isNull()) {
-            ResizableItem* resultItem = new ResizableItem;
+        if (!filteredImage.isNull())
+        {
+            ResizableItem *resultItem = new ResizableItem;
             resultItem->setPixmap(QPixmap::fromImage(filteredImage));
             resultItem->setPos(m_canvasItem->pos());
             addItemToScene(resultItem);
@@ -826,25 +762,27 @@ void MainWindow::onFilter(){
 };
 void MainWindow::onAbout()
 {
-    QMessageBox::about(this,"关于",QString("<h3>表情包制作器 v0.1</h3>"
-            "<p>开发者：@l-library</p>"
-            "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
+    QMessageBox::about(this, "关于", QString("<h3>表情包制作器 v0.1</h3>"
+                                             "<p>开发者：@l-library</p>"
+                                             "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
 
 void MainWindow::clearScene()
 {
     // 移除并删除所有非画布项目
-    for (ResizableItem* item : m_items.keys()) {
+    for (ResizableItem *item : m_items.keys())
+    {
         m_graphics_scene->removeItem(item);
         delete item;
     }
     m_items.clear();
     m_selected_items.clear();
-    m_current_z_value = 0;   // Z值重置，新插入项将从0开始
+    m_current_z_value = 0; // Z值重置，新插入项将从0开始
 }
 
 // 备用默认配置
-void MainWindow::setupDefaultMenuConfig() {
+void MainWindow::setupDefaultMenuConfig()
+{
     MenuConfig fileMenu;
     fileMenu.title = "文件(&F)";
     fileMenu.name = "menu_file";
@@ -862,53 +800,59 @@ void MainWindow::setupDefaultMenuConfig() {
     fileMenu.name = "menu_help";
     m_menuConfigs.append(fileMenu);
     // 显示错误信息
-    QMessageBox::critical(this,"错误","加载菜单栏配置错误！");
+    QMessageBox::critical(this, "错误", "加载菜单栏配置错误！");
 }
 
 // 画布管理方法实现
 void MainWindow::createDefaultCanvas()
 {
-    createCanvas(QSizeF(800, 600),0,0,Qt::white);
+    createCanvas(QSizeF(800, 600), 0, 0, Qt::white);
 }
 
-void MainWindow::createCanvas(QSizeF size,qreal pos_x,qreal pos_y, Qt::GlobalColor color) {
-    if (m_canvasItem) {
-        return;  // 画布已存在
+void MainWindow::createCanvas(QSizeF size, qreal pos_x, qreal pos_y, Qt::GlobalColor color)
+{
+    if (m_canvasItem)
+    {
+        return;
     }
 
     m_canvasItem = new ResizableItem();
     m_canvasItem->setCanvas(size, color);
     m_canvasItem->setPos(pos_x, pos_y);
-    m_canvasOffset = QPointF(pos_x,pos_y);
-    m_canvasItem->setZValue(-1000);  // 极低的z值，确保在底层
+    m_canvasOffset = QPointF(pos_x, pos_y);
+    m_canvasItem->setZValue(-1000);
     m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, false);
     m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, false);
 
     m_graphics_scene->addItem(m_canvasItem);
 
-    // 连接画布信号
     connect(m_canvasItem, &ResizableItem::itemDoubleClicked,
             this, &MainWindow::onCanvasDoubleClicked);
     connect(m_canvasItem, &ResizableItem::sizeChanged,
-            this, [this](ResizableItem*){
+            this, [this](ResizableItem *)
+            {
+                if (m_isUndoRedoing) return;
                 onUpdateCanvasSizeLabel();
-                markModified();
-            });
+                markModified(); });
     connect(m_canvasItem, &ResizableItem::positionChanged,
-            this, [this](ResizableItem*){
-        m_canvasOffset=m_canvasItem->pos();
-        markModified();
-    });
+            this, [this](ResizableItem *)
+            {
+                if (m_isUndoRedoing) return;
+                m_canvasOffset = m_canvasItem->pos();
+                markModified(); });
     connect(m_canvasItem, &ResizableItem::changeCanvasSize,
-            this, [this]{onSetCanvasSize();});
+            this, [this]
+            { onSetCanvasSize(); });
 }
 
-void MainWindow::setEditMode(EditMode mode) {
+void MainWindow::setEditMode(EditMode mode)
+{
     m_editMode = mode;
 
     // 更新画布可编辑性
     bool canvasEditable = (mode == CanvasEditMode);
-    if (m_canvasItem) {
+    if (m_canvasItem)
+    {
         m_canvasItem->setFlag(QGraphicsItem::ItemIsMovable, canvasEditable);
         m_canvasItem->setFlag(QGraphicsItem::ItemIsSelectable, canvasEditable);
     }
@@ -920,10 +864,13 @@ void MainWindow::setEditMode(EditMode mode) {
     updateEditModeUI();
 }
 
-void MainWindow::updateItemEditability() {
-    for (auto it = m_items.begin(); it != m_items.end(); ++it) {
-        ResizableItem* item = it.key();
-        if (item != m_canvasItem) {
+void MainWindow::updateItemEditability()
+{
+    for (auto it = m_items.begin(); it != m_items.end(); ++it)
+    {
+        ResizableItem *item = it.key();
+        if (item != m_canvasItem)
+        {
             bool editable = (m_editMode == NormalMode);
             item->setFlag(QGraphicsItem::ItemIsMovable, editable);
             item->setFlag(QGraphicsItem::ItemIsSelectable, editable);
@@ -931,82 +878,109 @@ void MainWindow::updateItemEditability() {
     }
 }
 
-QRectF MainWindow::getCanvasExportRect() const {
-    if (!m_canvasItem) {
+QRectF MainWindow::getCanvasExportRect() const
+{
+    if (!m_canvasItem)
+    {
         // 如果没有画布，使用可见区域（向后兼容）
         return m_graphics_view->mapToScene(
-                   m_graphics_view->viewport()->rect()).boundingRect();
+                                  m_graphics_view->viewport()->rect())
+            .boundingRect();
     }
 
     // 获取画布实际内容矩形（不包含手柄、边框等）
-    QSizeF canvasSize = m_canvasItem->getCanvasSize();  // 内容尺寸
-    QPointF canvasPos = m_canvasItem->pos();            // 左上角位置
+    QSizeF canvasSize = m_canvasItem->getCanvasSize(); // 内容尺寸
+    QPointF canvasPos = m_canvasItem->pos();           // 左上角位置
     QRectF exportRect(canvasPos, canvasSize);
 
     // 防止无效尺寸
-    if (exportRect.width() <= 0 || exportRect.height() <= 0) {
+    if (exportRect.width() <= 0 || exportRect.height() <= 0)
+    {
         exportRect = QRectF(0, 0, 800, 600);
     }
     return exportRect;
 }
 
-void MainWindow::updateEditModeUI() {
+void MainWindow::updateEditModeUI()
+{
     // 更新菜单项选中状态
-    QAction* canvasEditAction = m_actionMap.value("action_canvas_edit");
-    if (canvasEditAction) {
+    QAction *canvasEditAction = m_actionMap.value("action_canvas_edit");
+    if (canvasEditAction)
+    {
         canvasEditAction->setChecked(m_editMode == CanvasEditMode);
     }
 
     // 更新状态栏信息
-    if (m_editMode == CanvasEditMode) {
+    if (m_editMode == CanvasEditMode)
+    {
         ui->statusbar->showMessage("画布编辑模式 - 可以调整画布大小和位置");
-    } else {
+    }
+    else
+    {
         ui->statusbar->showMessage("普通编辑模式 - 可以编辑图片和文字");
     }
 }
 
 // 画布相关槽函数实现
-void MainWindow::onToggleCanvasEditMode() {
-    if (m_editMode == NormalMode) {
+void MainWindow::onToggleCanvasEditMode()
+{
+    if (m_editMode == NormalMode)
+    {
         setEditMode(CanvasEditMode);
-    } else {
+    }
+    else
+    {
         setEditMode(NormalMode);
     }
 }
 
-void MainWindow::onCanvasDoubleClicked(ResizableItem* canvas) {
-    if (canvas == m_canvasItem && m_editMode == CanvasEditMode) {
+void MainWindow::onCanvasDoubleClicked(ResizableItem *canvas)
+{
+    if (canvas == m_canvasItem && m_editMode == CanvasEditMode)
+    {
         // 在画布编辑模式下双击画布可以设置大小
         onSetCanvasSize();
     }
 }
 
-void MainWindow::onSetCanvasSize() {
-    if (!m_canvasItem) return;
+void MainWindow::onSetCanvasSize()
+{
+    if (!m_canvasItem)
+        return;
 
     QSizeF currentSize = m_canvasItem->getCanvasSize();
     bool ok;
     double width = QInputDialog::getDouble(this, "设置画布宽度",
-                                          "宽度 (像素):",
-                                          currentSize.width(),
-                                          50, 5000, 1, &ok);
-    if (!ok) return;
+                                           "宽度 (像素):",
+                                           currentSize.width(),
+                                           50, 5000, 1, &ok);
+    if (!ok)
+        return;
 
     double height = QInputDialog::getDouble(this, "设置画布高度",
-                                           "高度 (像素):",
-                                           currentSize.height(),
-                                           50, 5000, 1, &ok);
-    if (!ok) return;
+                                            "高度 (像素):",
+                                            currentSize.height(),
+                                            50, 5000, 1, &ok);
+    if (!ok)
+        return;
 
-    m_canvasItem->setCanvas(QSizeF(width, height), Qt::white);
+    QSizeF newSize(width, height);
+    pushCommand(new CanvasResizeCommand(this, m_canvasItem, currentSize, newSize));
 }
 
-void MainWindow::onResetCanvas() {
-    if (m_canvasItem) {
-        m_canvasItem->setCanvas(QSizeF(800, 600), Qt::white);
-        m_canvasItem->setPos(100, 100);
-        // 标记场景已被修改
-        markModified();
+void MainWindow::onResetCanvas()
+{
+    if (m_canvasItem)
+    {
+        QSizeF oldSize = m_canvasItem->getCanvasSize();
+        QPointF oldPos = m_canvasItem->pos();
+        QSizeF newSize(800, 600);
+        QPointF newPos(100, 100);
+
+        QList<QUndoCommand *> commands;
+        commands.append(new CanvasResizeCommand(this, m_canvasItem, oldSize, newSize));
+        commands.append(new CanvasMoveCommand(this, m_canvasItem, oldPos, newPos));
+        pushCommand(new CompositeCommand(tr("重置画布"), commands));
     }
 }
 
@@ -1028,14 +1002,19 @@ bool MainWindow::maybeSave()
            "是否保存修改？"),
         QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
-    if (ret == QMessageBox::Yes) {
+    if (ret == QMessageBox::Yes)
+    {
         // 调用保存文件
         onSaveFile();
         // 检查保存是否成功（如果用户取消保存对话框，m_isModified应该仍然为true）
-        return !m_isModified;  // 保存成功则返回true，取消则返回false
-    } else if (ret == QMessageBox::No) {
-        return true;  // 不保存，继续操作
-    } else {
+        return !m_isModified; // 保存成功则返回true，取消则返回false
+    }
+    else if (ret == QMessageBox::No)
+    {
+        return true; // 不保存，继续操作
+    }
+    else
+    {
         return false; // 取消操作
     }
 }
@@ -1059,22 +1038,323 @@ void MainWindow::resetModified()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (maybeSave()) {
+    if (maybeSave())
+    {
         event->accept();
-    } else {
+    }
+    else
+    {
         event->ignore();
+    }
+}
+
+void MainWindow::addItemToSceneDirectly(ResizableItem *item)
+{
+    if (!item)
+        return;
+
+    bool isNewItem = !item->data(0).isValid();
+    if (isNewItem)
+    {
+        item->setData(0, true);
+    }
+
+    if (item->isCanvas())
+    {
+        m_canvasItem = item;
+        item->setZValue(-1000);
+
+        bool canvasEditable = (m_editMode == CanvasEditMode);
+        item->setFlag(QGraphicsItem::ItemIsMovable, canvasEditable);
+        item->setFlag(QGraphicsItem::ItemIsSelectable, canvasEditable);
+    }
+    else
+    {
+        if (m_editMode == CanvasEditMode)
+        {
+            item->setFlag(QGraphicsItem::ItemIsMovable, false);
+            item->setFlag(QGraphicsItem::ItemIsSelectable, false);
+        }
+        else
+        {
+            item->setFlag(QGraphicsItem::ItemIsMovable, true);
+            item->setFlag(QGraphicsItem::ItemIsSelectable, true);
+        }
+    }
+
+    item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+    item->setAcceptHoverEvents(true);
+
+    QPointF offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
+    item->setPos(offset);
+
+    m_graphics_scene->addItem(item);
+
+    if (!item->isCanvas())
+    {
+        Item itemInfo;
+        itemInfo.pixmapItem = item;
+        itemInfo.offset = offset;
+        itemInfo.zValue = m_current_z_value++;
+        m_items[item] = itemInfo;
+
+        if (isNewItem)
+        {
+            connect(item, &ResizableItem::moveUpSignal, this, [this](ResizableItem *target)
+                    {
+                if (!m_items.contains(target)) return;
+                qreal maxZValue = 0;
+                for (const auto &itemInfo : m_items) {
+                    if (itemInfo.zValue > maxZValue) {
+                        maxZValue = itemInfo.zValue;
+                    }
+                }
+                qreal oldZValue = m_items[target].zValue;
+                qreal newZValue = maxZValue + 1;
+                m_items[target].zValue = newZValue;
+                target->setZValue(newZValue);
+                pushCommand(new ZValueChangeCommand(this, target, oldZValue, newZValue)); });
+            connect(item, &ResizableItem::moveDownSignal, this, [this](ResizableItem *target)
+                    {
+                if (!m_items.contains(target)) return;
+                qreal minZValue = m_items[target].zValue;
+                bool first = true;
+                for (const auto &itemInfo : m_items) {
+                    if (first) {
+                        minZValue = itemInfo.zValue;
+                        first = false;
+                    } else if (itemInfo.zValue < minZValue) {
+                        minZValue = itemInfo.zValue;
+                    }
+                }
+                qreal oldZValue = m_items[target].zValue;
+                qreal newZValue = minZValue - 1;
+                m_items[target].zValue = newZValue;
+                target->setZValue(newZValue);
+                pushCommand(new ZValueChangeCommand(this, target, oldZValue, newZValue)); });
+
+            connect(item, &ResizableItem::itemDoubleClicked, this, [this](ResizableItem *target)
+                    {
+                if(target->getItemType()==ItemType::Type_Image){
+                    QImage image = getImageFromFile("选择要更换的图片");
+                    if(image.isNull()) return;
+                    QPixmap oldPixmap = target->getPixmap();
+                    QPixmap newPixmap = QPixmap::fromImage(image);
+                    pushCommand(new ChangePixmapCommand(this, target, oldPixmap, newPixmap));
+                } else {
+                    bool ok;
+                    QString newText = QInputDialog::getText(this, "编辑文本",
+                                                            "请输入新内容:",
+                                                            QLineEdit::Normal,
+                                                            target->getText(), &ok);
+                    if (ok && !newText.isEmpty()) {
+                        QString oldText = target->getText();
+                        pushCommand(new ChangeTextCommand(this, target, oldText, newText));
+                    }
+                } });
+
+            connect(item, &ResizableItem::imageCropRequested, this, [this](ResizableItem *target)
+                    {
+                auto image = ImageCropperDialog::getCroppedImage(target->getPixmap(),1024,576,CropperShape::RECT);
+                if(!image.isNull()) {
+                    QPixmap oldPixmap = target->getPixmap();
+                    QPixmap newPixmap = image;
+                    pushCommand(new ChangePixmapCommand(this, target, oldPixmap, newPixmap));
+                } });
+
+            connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target)
+                    { pushCommand(new DeleteItemCommand(this, target)); });
+
+            connect(item, &ResizableItem::sizeChanged, this, [this](ResizableItem *)
+                    {
+                if (m_isUndoRedoing) return;
+                markModified(); });
+            connect(item, &ResizableItem::positionChanged, this, [this](ResizableItem *)
+                    {
+                if (m_isUndoRedoing) return;
+                markModified(); });
+            connect(item, &ResizableItem::moveStarted, this, [this](ResizableItem *target)
+                    {
+                if (m_isUndoRedoing) return;
+                recordItemMoveStart(target); });
+            connect(item, &ResizableItem::moveFinished, this, [this](ResizableItem *target)
+                    {
+                if (m_isUndoRedoing) return;
+                finishItemMove(target); });
+        }
+
+        selectItem(item);
+        markModified();
+    }
+    else
+    {
+        if (isNewItem)
+        {
+            connect(item, &ResizableItem::itemDoubleClicked,
+                    this, &MainWindow::onCanvasDoubleClicked);
+            connect(item, &ResizableItem::sizeChanged,
+                    this, [this](ResizableItem *)
+                    {
+                    if (m_isUndoRedoing) return;
+                    onUpdateCanvasSizeLabel();
+                    markModified(); });
+            connect(item, &ResizableItem::positionChanged,
+                    this, [this](ResizableItem *)
+                    {
+                    if (m_isUndoRedoing) return;
+                    m_canvasOffset = m_canvasItem->pos();
+                    markModified(); });
+            connect(item, &ResizableItem::changeCanvasSize,
+                    this, [this]
+                    { onSetCanvasSize(); });
+        }
+    }
+
+    DimOutsideCanvasEffect *effect = new DimOutsideCanvasEffect(item, m_canvasItem);
+    item->setGraphicsEffect(effect);
+}
+
+void MainWindow::removeItemFromScene(ResizableItem *item)
+{
+    if (!item)
+        return;
+
+    m_selected_items.remove(item);
+    m_items.remove(item);
+    m_graphics_scene->removeItem(item);
+    markModified();
+}
+
+void MainWindow::moveItemTo(ResizableItem *item, const QPointF &pos)
+{
+    if (!item)
+        return;
+
+    m_isUndoRedoing = true;
+    item->setPos(pos);
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::resizeItemTo(ResizableItem *item, const QRectF &rect, const QPointF &pos)
+{
+    if (!item)
+        return;
+
+    m_isUndoRedoing = true;
+    item->setContentRect(rect);
+    item->setPos(pos);
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::setItemZValue(ResizableItem *item, qreal zValue)
+{
+    if (!item)
+        return;
+
+    if (m_items.contains(item))
+    {
+        m_items[item].zValue = zValue;
+    }
+    item->setZValue(zValue);
+    markModified();
+}
+
+void MainWindow::setItemPixmap(ResizableItem *item, const QPixmap &pixmap)
+{
+    if (!item)
+        return;
+
+    m_isUndoRedoing = true;
+    item->setPixmap(pixmap);
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::setItemText(ResizableItem *item, const QString &text)
+{
+    if (!item)
+        return;
+
+    m_isUndoRedoing = true;
+    item->setText(text);
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::setCanvasSize(ResizableItem *canvas, const QSizeF &size)
+{
+    if (!canvas || canvas != m_canvasItem)
+        return;
+
+    m_isUndoRedoing = true;
+    canvas->setCanvas(size, canvas->getCanvasColor());
+    onUpdateCanvasSizeLabel();
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::moveCanvasTo(ResizableItem *canvas, const QPointF &pos)
+{
+    if (!canvas || canvas != m_canvasItem)
+        return;
+
+    m_isUndoRedoing = true;
+    canvas->setPos(pos);
+    m_canvasOffset = pos;
+    m_isUndoRedoing = false;
+    markModified();
+}
+
+void MainWindow::pushCommand(QUndoCommand *command)
+{
+    if (m_undoStack)
+    {
+        m_undoStack->push(command);
+    }
+    else
+    {
+        delete command;
+    }
+}
+
+void MainWindow::recordItemMoveStart(ResizableItem *item)
+{
+    if (!item || item->isCanvas())
+        return;
+    m_itemMoveStartPos[item] = item->pos();
+}
+
+void MainWindow::finishItemMove(ResizableItem *item)
+{
+    if (!item || item->isCanvas())
+        return;
+    if (!m_itemMoveStartPos.contains(item))
+        return;
+
+    QPointF oldPos = m_itemMoveStartPos[item];
+    QPointF newPos = item->pos();
+
+    m_itemMoveStartPos.remove(item);
+
+    if (oldPos != newPos)
+    {
+        pushCommand(new MoveItemCommand(this, item, oldPos, newPos));
     }
 }
 
 MainWindow::~MainWindow()
 {
     // 清理所有动态分配的ResizableItem对象
-    clearScene();  // 删除所有非画布项目
+    clearScene(); // 删除所有非画布项目
 
     // 删除画布项目
-    if (m_canvasItem) {
+    if (m_canvasItem)
+    {
         // 从场景中移除画布（如果还在场景中）
-        if (m_graphics_scene && m_graphics_scene->items().contains(m_canvasItem)) {
+        if (m_graphics_scene && m_graphics_scene->items().contains(m_canvasItem))
+        {
             m_graphics_scene->removeItem(m_canvasItem);
         }
         delete m_canvasItem;

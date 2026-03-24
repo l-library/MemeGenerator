@@ -73,7 +73,6 @@
                     "shortcut": "Ctrl+Z",
                     "standardKey": "Undo",
                     "statusTip": "撤销上一步操作",
-                    "enabled": false,
                     "slot": "onUndo"
                 },
                 {
@@ -83,7 +82,6 @@
                     "shortcut": "Ctrl+Y",
                     "standardKey": "Redo",
                     "statusTip": "重做撤销的操作",
-                    "enabled": false,
                     "slot": "onRedo"
                 },
                 {

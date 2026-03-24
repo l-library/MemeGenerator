@@ -5,17 +5,24 @@
 #include <QFont>
 
 // 手柄位置枚举
-enum HandlePosition {
+enum HandlePosition
+{
     Handle_None,
-    Handle_TopLeft, Handle_Top, Handle_TopRight,
-    Handle_Left, Handle_Right,
-    Handle_BottomLeft, Handle_Bottom, Handle_BottomRight
+    Handle_TopLeft,
+    Handle_Top,
+    Handle_TopRight,
+    Handle_Left,
+    Handle_Right,
+    Handle_BottomLeft,
+    Handle_Bottom,
+    Handle_BottomRight
 };
 // 物品类型枚举
-enum ItemType {
+enum ItemType
+{
     Type_Image,
     Type_Text,
-    Type_Canvas  // 新增画布类型
+    Type_Canvas // 新增画布类型
 };
 
 class ResizableItem : public QGraphicsObject
@@ -60,19 +67,19 @@ public:
      * @brief 获得当前物品的类型
      * @return 物品类型枚举
      */
-    ItemType getItemType(){return m_type; }
+    ItemType getItemType() { return m_type; }
 
     /**
      * @brief 获得当前文本内容
      * @return 文本字符串
      */
-    QString getText(){return m_text; }
+    QString getText() { return m_text; }
 
     /**
      * @brief 获得当前图片（仅对图片有效）
      * @return 图片数据
      */
-    QPixmap getPixmap(){return m_pixmap; }
+    QPixmap getPixmap() { return m_pixmap; }
 
     /**
      * @brief 设置文本背景颜色（仅对文本类型有效）
@@ -114,6 +121,21 @@ public:
      */
     QRectF getContentRect() const { return m_rect; }
 
+    /**
+     * @brief 获取内容矩形（可修改，用于撤销/重做）
+     */
+    QRectF &getMutableRect() { return m_rect; }
+
+    /**
+     * @brief 获取画布颜色
+     */
+    QColor getCanvasColor() const { return m_canvasColor; }
+
+    /**
+     * @brief 设置内容矩形（用于撤销/重做）
+     */
+    void setContentRect(const QRectF &rect);
+
 signals:
     /**
      * @brief 双击信号
@@ -141,6 +163,16 @@ signals:
      */
     void positionChanged(ResizableItem *item);
     /**
+     * @brief 移动开始信号
+     * @param item 开始移动的项指针
+     */
+    void moveStarted(ResizableItem *item);
+    /**
+     * @brief 移动结束信号
+     * @param item 移动结束的项指针
+     */
+    void moveFinished(ResizableItem *item);
+    /**
      * @brief 更改画布大小信号
      * @param item 请求更改画布大小的项指针
      */
@@ -155,7 +187,6 @@ signals:
      * @param item 请求变化位置的项指针
      */
     void moveDownSignal(ResizableItem *item);
-
 
 protected:
     /**
@@ -206,11 +237,11 @@ private:
     QRectF m_rect;
     QString m_text;
     QPixmap m_pixmap;
-    QColor m_textBackgroundColor;  // 文本背景颜色
-    QColor m_textColor;            // 文本颜色
-    QFont m_textFont;              // 文本字体
-    QColor m_canvasColor;          // 画布背景颜色
-    mutable qreal m_currentScale;  // 当前视图缩放因子，用于固定手柄大小
+    QColor m_textBackgroundColor; // 文本背景颜色
+    QColor m_textColor;           // 文本颜色
+    QFont m_textFont;             // 文本字体
+    QColor m_canvasColor;         // 画布背景颜色
+    mutable qreal m_currentScale; // 当前视图缩放因子，用于固定手柄大小
 
     HandlePosition m_handleSelected;
 
