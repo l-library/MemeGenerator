@@ -148,24 +148,32 @@ void ResizableItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if (event->button() == Qt::LeftButton && isSelected()) {
         m_handleSelected = getHandleAt(event->pos());
         if (m_handleSelected != Handle_None) {
-            // 记录场景坐标
             m_resizeStartScenePos = event->scenePos();
-            // 记录 Item 当前的初始状态
             m_initialRect = m_rect;
             m_initialPos = pos();
-            // 拦截事件
             event->accept();
             return;
         }
     }
+    
+    m_initialPos = pos();
     QGraphicsItem::mousePressEvent(event);
+    
+    if (event->button() == Qt::LeftButton && !isCanvas() && m_handleSelected == Handle_None) {
+        emit moveStarted(this);
+    }
 }
 
 void ResizableItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    bool wasMoving = (m_handleSelected == Handle_None && !isCanvas());
     m_handleSelected = Handle_None;
     setCursor(Qt::ArrowCursor);
     QGraphicsItem::mouseReleaseEvent(event);
+    
+    if (wasMoving && event->button() == Qt::LeftButton) {
+        emit moveFinished(this);
+    }
 }
 
 QVariant ResizableItem::itemChange(GraphicsItemChange change, const QVariant &value)
@@ -454,6 +462,12 @@ void ResizableItem::setCanvasColor(const QColor &color) {
         m_canvasColor = color;
         update();
     }
+}
+
+void ResizableItem::setContentRect(const QRectF& rect) {
+    prepareGeometryChange();
+    m_rect = rect;
+    update();
 }
 
 // 右键菜单

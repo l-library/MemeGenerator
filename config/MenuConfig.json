@@ -73,7 +73,6 @@
                     "shortcut": "Ctrl+Z",
                     "standardKey": "Undo",
                     "statusTip": "撤销上一步操作",
-                    "enabled": false,
                     "slot": "onUndo"
                 },
                 {
@@ -83,7 +82,6 @@
                     "shortcut": "Ctrl+Y",
                     "standardKey": "Redo",
                     "statusTip": "重做撤销的操作",
-                    "enabled": false,
                     "slot": "onRedo"
                 },
                 {
@@ -93,8 +91,7 @@
                     "id": "action_zoomin",
                     "text": "放大",
                     "icon": ":/icons/zoomin.png",
-                    "shortcut": "Ctrl+Plus",
-                    "standardKey": "ZoomIn",
+                    "shortcut": "Ctrl+=",
                     "statusTip": "放大场景",
                     "slot": "onZoomIn"
                 },
@@ -127,6 +124,15 @@
                     "standardKey": "Paste",
                     "statusTip": "粘贴剪贴板中的内容",
                     "slot": "onPaste"
+                },
+                {
+                    "id": "action_delete",
+                    "text": "删除",
+                    "icon": ":/icons/delete.png",
+                    "shortcut": "Delete",
+                    "standardKey": "Delete",
+                    "statusTip": "删除选中项目",
+                    "slot": "onDeleteSelected"
                 },
                 {
                     "separator": true

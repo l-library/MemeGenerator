@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QCloseEvent>
+#include <QUndoStack>
 
 QT_BEGIN_NAMESPACE
 
@@ -21,8 +22,18 @@ QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
-    // 引入QT信号和槽机制
     Q_OBJECT
+
+    friend class AddItemCommand;
+    friend class DeleteItemCommand;
+    friend class MoveItemCommand;
+    friend class ResizeItemCommand;
+    friend class ZValueChangeCommand;
+    friend class ChangePixmapCommand;
+    friend class ChangeTextCommand;
+    friend class CanvasResizeCommand;
+    friend class CanvasMoveCommand;
+    friend class CompositeCommand;
 
 public:
     /**
@@ -43,6 +54,9 @@ public:
         QPointF offset;  // 相对于原始位置的偏移
         qreal zValue;    // z轴值，用于图层管理
     };
+
+protected:
+    void wheelEvent(QWheelEvent *event) override;   // 重写滚轮事件
 
 private slots:
     // 槽函数
@@ -94,6 +108,10 @@ private slots:
      * @brief 粘贴槽函数
      */
     void onPaste();
+    /**
+     * @brief 删除选中项槽函数
+     */
+    void onDeleteSelected();
     /**
      * @brief 插入图片槽函数
      */
@@ -263,6 +281,64 @@ private:
      */
     void closeEvent(QCloseEvent *event) override;
 
+    // 撤销/重做系统辅助方法（供命令类调用）
+    /**
+     * @brief 直接添加项目到场景（不创建命令）
+     */
+    void addItemToSceneDirectly(ResizableItem* item);
+    /**
+     * @brief 从场景移除项目（不创建命令）
+     */
+    void removeItemFromScene(ResizableItem* item);
+    /**
+     * @brief 移动项目到指定位置（不创建命令）
+     */
+    void moveItemTo(ResizableItem* item, const QPointF& pos);
+    /**
+     * @brief 调整项目大小（不创建命令）
+     */
+    void resizeItemTo(ResizableItem* item, const QRectF& rect, const QPointF& pos);
+    /**
+     * @brief 设置项目Z值（不创建命令）
+     */
+    void setItemZValue(ResizableItem* item, qreal zValue);
+    /**
+     * @brief 设置项目图片（不创建命令）
+     */
+    void setItemPixmap(ResizableItem* item, const QPixmap& pixmap);
+    /**
+     * @brief 设置项目文本（不创建命令）
+     */
+    void setItemText(ResizableItem* item, const QString& text);
+    /**
+     * @brief 设置画布大小（不创建命令）
+     */
+    void setCanvasSize(ResizableItem* canvas, const QSizeF& size);
+    /**
+     * @brief 移动画布到指定位置（不创建命令）
+     */
+    void moveCanvasTo(ResizableItem* canvas, const QPointF& pos);
+    /**
+     * @brief 推送命令到撤销栈
+     */
+    void pushCommand(QUndoCommand* command);
+    /**
+     * @brief 检查是否正在执行撤销/重做操作
+     */
+    bool isUndoRedoing() const { return m_isUndoRedoing; }
+    /**
+     * @brief 设置撤销/重做状态
+     */
+    void setUndoRedoing(bool value) { m_isUndoRedoing = value; }
+    /**
+     * @brief 记录项目移动前的位置
+     */
+    void recordItemMoveStart(ResizableItem* item);
+    /**
+     * @brief 完成项目移动并创建命令
+     */
+    void finishItemMove(ResizableItem* item);
+
     QHash<QString, QAction*> m_actionMap;  // 存储actionId到QAction的映射
     QVector<MenuConfig> m_menuConfigs;     // 存储菜单配置
     QLabel* m_canvasSizeLabel;             // 状态栏显示当前画布大小
@@ -282,5 +358,9 @@ private:
     QPointF m_canvasOffset;       // 画布的位置偏移
     // 修改状态管理
     bool m_isModified;            // 场景是否被修改
+    // 撤销/重做系统
+    QUndoStack* m_undoStack;      // 撤销栈
+    bool m_isUndoRedoing;         // 是否正在执行撤销/重做操作
+    QMap<ResizableItem*, QPointF> m_itemMoveStartPos;  // 项目移动前的位置
 };
 #endif // MAINWINDOW_H
