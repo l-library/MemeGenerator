@@ -91,8 +91,7 @@
                     "id": "action_zoomin",
                     "text": "放大",
                     "icon": ":/icons/zoomin.png",
-                    "shortcut": "Ctrl+Plus",
-                    "standardKey": "ZoomIn",
+                    "shortcut": "Ctrl+=",
                     "statusTip": "放大场景",
                     "slot": "onZoomIn"
                 },

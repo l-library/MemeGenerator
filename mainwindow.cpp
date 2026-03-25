@@ -114,6 +114,28 @@ void MainWindow::initGraphicsView()
 
 void MainWindow::initButton()
 {
+    // 放大缩小按钮
+    auto zoom_in_out_layout = new QGridLayout(this);
+    zoom_in_out_layout->setColumnStretch(0,50);
+    zoom_in_out_layout->setColumnStretch(1,50);
+    m_grid_layout->addLayout(zoom_in_out_layout, 0, 2);
+    QPushButton *zoomIn = new QPushButton(this);
+    zoomIn->setText("放大");
+    zoomIn->setStatusTip("放大当前场景");
+    zoomIn->setIcon(QIcon(":/icons/zoomin.png"));
+    zoomIn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(zoomIn, &QPushButton::pressed, [=]()
+            { onZoomIn(); });
+    QPushButton *zoomOut = new QPushButton(this);
+    zoomOut->setText("缩小");
+    zoomOut->setStatusTip("缩小当前场景");
+    zoomOut->setIcon(QIcon(":/icons/zoomout.png"));
+    zoomOut->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(zoomOut, &QPushButton::pressed, [=]()
+            { onZoomOut(); });
+    zoom_in_out_layout->addWidget(zoomOut,0,0);
+    zoom_in_out_layout->addWidget(zoomIn,0,1);
+
     // 画布编辑模式切换按钮
     QPushButton *canvasEditButton = new QPushButton(this);
     canvasEditButton->setText("画布编辑");
@@ -125,7 +147,7 @@ void MainWindow::initButton()
     connect(canvasEditButton, &QPushButton::toggled, [this](bool checked)
             { setEditMode(checked ? CanvasEditMode : NormalMode); });
     canvasEditButton->setShortcut(QKeySequence("Ctrl+E"));
-    m_grid_layout->addWidget(canvasEditButton, 0, 2);
+    m_grid_layout->addWidget(canvasEditButton, 1, 2);
 
     // 打开文件按钮
     QPushButton *file_open_btn = new QPushButton(this);
@@ -135,7 +157,7 @@ void MainWindow::initButton()
     file_open_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connect(file_open_btn, &QPushButton::pressed, [=]()
             { onOpenFile(); });
-    m_grid_layout->addWidget(file_open_btn, 1, 2);
+    m_grid_layout->addWidget(file_open_btn, 2, 2);
 
     // 插入图片按钮
     QPushButton *insert_picture_btn = new QPushButton(this);
@@ -145,7 +167,7 @@ void MainWindow::initButton()
     insert_picture_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connect(insert_picture_btn, &QPushButton::pressed, [=]()
             { onInsertPicture(); });
-    m_grid_layout->addWidget(insert_picture_btn, 2, 2);
+    m_grid_layout->addWidget(insert_picture_btn, 3, 2);
 
     // 插入文本按钮
     QPushButton *insert_text_btn = new QPushButton(this);
@@ -155,7 +177,17 @@ void MainWindow::initButton()
     insert_text_btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connect(insert_text_btn, &QPushButton::pressed, [=]()
             { onInsertText(); });
-    m_grid_layout->addWidget(insert_text_btn, 3, 2);
+    m_grid_layout->addWidget(insert_text_btn, 4, 2);
+
+    // 添加滤镜按钮
+    QPushButton *insert_filter = new QPushButton(this);
+    insert_filter->setText("添加滤镜");
+    insert_filter->setStatusTip("为场景添加一个加入滤镜的图层");
+    insert_filter->setIcon(QIcon(":/icons/filtereffect.png"));
+    insert_filter->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(insert_filter, &QPushButton::pressed, [=]()
+            { onFilter(); });
+    m_grid_layout->addWidget(insert_filter, 5, 2);
 
     // 导出按钮
     QPushButton *save_file_button = new QPushButton(this);
@@ -1193,18 +1225,7 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item)
 
             connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target)
                     {
-                // 从选中集合中移除
-                m_selected_items.remove(target);
-
-                // 从物品映射中移除
-                m_items.remove(target);
-
-                // 从场景中移除
-                m_graphics_scene->removeItem(target);
-
-                // 删除对象
-                delete target;
-
+                // 创建删除命令，命令会处理item的删除和恢复
                 pushCommand(new DeleteItemCommand(this, target));
             });
 

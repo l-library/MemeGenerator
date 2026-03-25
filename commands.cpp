@@ -37,7 +37,7 @@ void AddItemCommand::redo()
 }
 
 DeleteItemCommand::DeleteItemCommand(MainWindow *mainWindow, ResizableItem *item, QUndoCommand *parent)
-    : QUndoCommand(parent), m_mainWindow(mainWindow), m_item(nullptr), m_ownsItem(false)
+    : QUndoCommand(parent), m_mainWindow(mainWindow), m_item(item), m_ownsItem(false)
 {
     setText(QObject::tr("删除项目"));
 
@@ -53,6 +53,8 @@ DeleteItemCommand::DeleteItemCommand(MainWindow *mainWindow, ResizableItem *item
 
 DeleteItemCommand::~DeleteItemCommand()
 {
+    // 注意：item在redo()中已经被删除，所以这里不需要再删除
+    // 但为了安全起见，如果还有item存在且我们拥有它，则删除它
     if (m_ownsItem && m_item)
     {
         delete m_item;
@@ -65,6 +67,7 @@ void DeleteItemCommand::undo()
     if (!m_mainWindow)
         return;
 
+    // 如果item已经被删除（在redo中），需要重新创建
     if (!m_item)
     {
         m_item = new ResizableItem();
@@ -77,10 +80,10 @@ void DeleteItemCommand::undo()
         {
             m_item->setText(m_text);
         }
+        
+        m_item->setPos(m_position);
+        m_item->setZValue(m_zValue);
     }
-
-    m_item->setPos(m_position);
-    m_item->setZValue(m_zValue);
 
     m_mainWindow->addItemToSceneDirectly(m_item);
     m_ownsItem = false;
@@ -88,11 +91,17 @@ void DeleteItemCommand::undo()
 
 void DeleteItemCommand::redo()
 {
-    if (!m_mainWindow || !m_item)
+    if (!m_mainWindow)
         return;
 
-    m_mainWindow->removeItemFromScene(m_item);
-    m_ownsItem = true;
+    if (m_item)
+    {
+        m_mainWindow->removeItemFromScene(m_item);
+        // 立即删除item
+        delete m_item;
+        m_item = nullptr;
+        m_ownsItem = true;
+    }
 }
 
 MoveItemCommand::MoveItemCommand(MainWindow *mainWindow, ResizableItem *item, const QPointF &oldPos, const QPointF &newPos, QUndoCommand *parent)
