@@ -127,6 +127,15 @@
                     "slot": "onPaste"
                 },
                 {
+                    "id": "action_delete",
+                    "text": "删除",
+                    "icon": ":/icons/delete.png",
+                    "shortcut": "Delete",
+                    "standardKey": "Delete",
+                    "statusTip": "删除选中项目",
+                    "slot": "onDeleteSelected"
+                },
+                {
                     "separator": true
                 },
                 {

@@ -55,6 +55,9 @@ public:
         qreal zValue;    // z轴值，用于图层管理
     };
 
+protected:
+    void wheelEvent(QWheelEvent *event) override;   // 重写滚轮事件
+
 private slots:
     // 槽函数
     /**
@@ -105,6 +108,10 @@ private slots:
      * @brief 粘贴槽函数
      */
     void onPaste();
+    /**
+     * @brief 删除选中项槽函数
+     */
+    void onDeleteSelected();
     /**
      * @brief 插入图片槽函数
      */

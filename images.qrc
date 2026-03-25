@@ -23,5 +23,6 @@
         <file>icons/canvas.png</file>
         <file>icons/canvassize.png</file>
         <file>icons/reset.png</file>
+        <file>icons/delete.png</file>
     </qresource>
 </RCC>

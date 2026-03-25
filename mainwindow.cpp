@@ -335,6 +335,10 @@ void MainWindow::connectActionToSlot(const QString &slotName, QAction *action)
     {
         connect(action, &QAction::triggered, this, &MainWindow::onResetCanvas);
     }
+    else if (slotName == "onDeleteSelected")
+    {
+        connect(action, &QAction::triggered, this, &MainWindow::onDeleteSelected);
+    }
 }
 
 QImage MainWindow::getImageFromFile(QString title)
@@ -694,6 +698,31 @@ void MainWindow::onPaste()
     {
         QMessageBox::warning(this, "警告", "不支持的粘贴类型！");
     }
+}
+
+void MainWindow::onDeleteSelected()
+{
+    // 获取场景中所有选中的项
+    QList<QGraphicsItem*> selectedItems = m_graphics_scene->selectedItems();
+    
+    if (selectedItems.isEmpty())
+    {
+        this->statusBar()->showMessage("没有选中的项目可删除");
+        return;
+    }
+    
+    // 遍历所有选中的项，删除非画布项
+    for (QGraphicsItem* graphicsItem : selectedItems)
+    {
+        ResizableItem* item = dynamic_cast<ResizableItem*>(graphicsItem);
+        if (item && item != m_canvasItem)
+        {
+            // 使用删除命令来支持撤销/重做
+            pushCommand(new DeleteItemCommand(this, item));
+        }
+    }
+    
+    this->statusBar()->showMessage(QString("删除了 %1 个项目").arg(selectedItems.size()));
 }
 
 void MainWindow::onInsertPicture()
@@ -1163,7 +1192,21 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item)
                 } });
 
             connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target)
-                    { pushCommand(new DeleteItemCommand(this, target)); });
+                    {
+                // 从选中集合中移除
+                m_selected_items.remove(target);
+
+                // 从物品映射中移除
+                m_items.remove(target);
+
+                // 从场景中移除
+                m_graphics_scene->removeItem(target);
+
+                // 删除对象
+                delete target;
+
+                pushCommand(new DeleteItemCommand(this, target));
+            });
 
             connect(item, &ResizableItem::sizeChanged, this, [this](ResizableItem *)
                     {
@@ -1342,6 +1385,25 @@ void MainWindow::finishItemMove(ResizableItem *item)
     {
         pushCommand(new MoveItemCommand(this, item, oldPos, newPos));
     }
+}
+
+void MainWindow::wheelEvent(QWheelEvent *event)
+{
+    if (event->modifiers() & Qt::ControlModifier) {
+        int delta = event->angleDelta().y(); // 正值表示向上滚动（放大），负值表示向下滚动（缩小）
+
+        if (delta > 0) {
+            onZoomIn();   // 放大
+        } else if (delta < 0) {
+            onZoomOut();  // 缩小
+        }
+
+        event->accept();  // 事件已处理，不再传递
+    }
+    else {
+    // 未按下 Ctrl，交给基类处理
+    QMainWindow::wheelEvent(event);
+}
 }
 
 MainWindow::~MainWindow()
