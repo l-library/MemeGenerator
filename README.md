@@ -1,4 +1,4 @@
-# <center>MemeGenerator <img src="./logo.ico" width="35" height="35" style="display: inline-block; vertical-align: middle;"> 表情包生成器
+<h1 align="center">MemeGenerator <img src="./logo.ico" width="35" height="35" style="display: inline-block; vertical-align: middle;"> 表情包生成器</h1>
 
 一款基于Qt框架开发的跨平台表情包生成工具，支持图片编辑、文本添加、滤镜效果、裁剪缩放等功能，操作简单直观。
 

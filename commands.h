@@ -16,7 +16,7 @@ class MainWindow;
 class AddItemCommand : public QUndoCommand
 {
 public:
-    AddItemCommand(MainWindow *mainWindow, ResizableItem *item, QUndoCommand *parent = nullptr);
+    AddItemCommand(MainWindow *mainWindow, ResizableItem *item, QPointF pos = {-112, -112},QUndoCommand *parent = nullptr);
     ~AddItemCommand();
     void undo() override;
     void redo() override;
@@ -25,6 +25,7 @@ public:
 private:
     MainWindow *m_mainWindow;
     ResizableItem *m_item;
+    QPointF m_position;
     bool m_ownsItem;
 };
 

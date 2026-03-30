@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     commands.cpp \
+    cyberdistressingdialog.cpp \
     filterdialog.cpp \
     imagecropperlabel.cpp \
     main.cpp \
@@ -19,6 +20,7 @@ SOURCES += \
 
 HEADERS += \
     commands.h \
+    cyberdistressingdialog.h \
     dimoutsidecanvaseffect.h \
     filterdialog.h \
     imagecropperdialog.h \
@@ -28,6 +30,7 @@ HEADERS += \
     resizableitem.h
 
 FORMS += \
+    cyberdistressingdialog.ui \
     filterdialog.ui \
     mainwindow.ui
 

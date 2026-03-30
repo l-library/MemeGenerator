@@ -511,7 +511,7 @@ void MainWindow::onOpenFile()
 }
 
 // 将图片添加到场景
-void MainWindow::addItemToScene(ResizableItem *item)
+void MainWindow::addItemToScene(ResizableItem *item, QPointF pos)
 {
     if (!item)
         return;
@@ -522,7 +522,7 @@ void MainWindow::addItemToScene(ResizableItem *item)
     }
     else
     {
-        pushCommand(new AddItemCommand(this, item));
+        pushCommand(new AddItemCommand(this, item, pos));
     }
 }
 
@@ -810,12 +810,23 @@ void MainWindow::onFilter()
     if (filterDialog.exec() == QDialog::Accepted)
     {
         QImage filteredImage = filterDialog.getFilteredCopy();
-        if (!filteredImage.isNull())
+        if (!filteredImage.isNull() && m_canvasItem)
         {
+            // 使用与getSceneImage()相同的逻辑获取画布区域
+            QRectF exportRect = getCanvasExportRect();
+            QSize intCanvasSize(exportRect.width(), exportRect.height());
+            QPointF pos(exportRect.x(),exportRect.y());
+            
+            // 将滤镜图像缩放到画布大小
+            QImage scaledFilteredImage = filteredImage.scaled(
+                intCanvasSize,
+                Qt::IgnoreAspectRatio,
+                Qt::SmoothTransformation
+            );
+            
             ResizableItem *resultItem = new ResizableItem;
-            resultItem->setPixmap(QPixmap::fromImage(filteredImage));
-            resultItem->setPos(m_canvasItem->pos());
-            addItemToScene(resultItem);
+            resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
+            addItemToScene(resultItem, pos);
 
             QMessageBox::information(this, "滤镜应用", "滤镜已应用到新创建的图层中");
         }
@@ -823,7 +834,7 @@ void MainWindow::onFilter()
 };
 void MainWindow::onAbout()
 {
-    QMessageBox::about(this, "关于", QString("<h3>表情包制作器 v0.1</h3>"
+    QMessageBox::about(this, "关于", QString("<h3>表情包制作器 v0.6</h3>"
                                              "<p>开发者：@l-library</p>"
                                              "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
@@ -1109,7 +1120,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
-void MainWindow::addItemToSceneDirectly(ResizableItem *item)
+void MainWindow::addItemToSceneDirectly(ResizableItem *item, QPointF set_pos)
 {
     if (!item)
         return;
@@ -1146,7 +1157,9 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item)
     item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
     item->setAcceptHoverEvents(true);
 
-    QPointF offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
+    QPointF offset = set_pos;
+    if(set_pos.x() == -112 && set_pos.y() == -112)
+        offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
     item->setPos(offset);
 
     m_graphics_scene->addItem(item);
