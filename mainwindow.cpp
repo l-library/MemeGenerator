@@ -23,6 +23,7 @@
 #include "imagecropperdialog.h"
 #include "DimOutsideCanvasEffect.h"
 #include "filterdialog.h"
+#include "cyberdistressingdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -188,6 +189,16 @@ void MainWindow::initButton()
     connect(insert_filter, &QPushButton::pressed, [=]()
             { onFilter(); });
     m_grid_layout->addWidget(insert_filter, 5, 2);
+
+    // 做旧按钮
+    QPushButton *distress = new QPushButton(this);
+    distress->setText("赛博做旧");
+    distress->setStatusTip("给表情包加点时代的气息");
+    distress->setIcon(QIcon(":/icons/distress.png"));
+    distress->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(distress, &QPushButton::pressed, [=]()
+            { onDistress(); });
+    m_grid_layout->addWidget(distress, 6, 2);
 
     // 导出按钮
     QPushButton *save_file_button = new QPushButton(this);
@@ -370,6 +381,10 @@ void MainWindow::connectActionToSlot(const QString &slotName, QAction *action)
     else if (slotName == "onDeleteSelected")
     {
         connect(action, &QAction::triggered, this, &MainWindow::onDeleteSelected);
+    }
+    else if (slotName == "onDistress")
+    {
+        connect(action, &QAction::triggered, this, &MainWindow::onDistress);
     }
 }
 
@@ -755,6 +770,18 @@ void MainWindow::onDeleteSelected()
     }
     
     this->statusBar()->showMessage(QString("删除了 %1 个项目").arg(selectedItems.size()));
+}
+
+void MainWindow::onDistress()
+{
+    QImage sceneImage = getSceneImage();
+    if (sceneImage.isNull())
+    {
+        return;
+    }
+    CyberDistressingDialog distress_dialog(this);
+    distress_dialog.setOriginalImage(sceneImage);
+    distress_dialog.exec();
 }
 
 void MainWindow::onInsertPicture()

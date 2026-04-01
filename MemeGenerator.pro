@@ -30,7 +30,6 @@ HEADERS += \
     resizableitem.h
 
 FORMS += \
-    cyberdistressingdialog.ui \
     filterdialog.ui \
     mainwindow.ui
 

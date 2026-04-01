@@ -207,6 +207,16 @@
                     "icon": ":/icons/filtereffect.png",
                     "statusTip": "选择一个滤镜加入当前文件",
                     "slot": "onFilter"
+                },
+                {
+                    "separator": true
+                },
+                {
+                    "id": "action_distress",
+                    "text": "赛博做旧",
+                    "icon": ":/icons/distress.png",
+                    "statusTip": "给表情包加点时代气息",
+                    "slot": "onDistress"
                 }
             ]
         },

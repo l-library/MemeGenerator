@@ -15,6 +15,7 @@ FilterDialog::FilterDialog(QWidget *parent)
 {
     ui->setupUi(this);
     this->setWindowTitle("设置滤镜");
+    this->setWindowIcon(QIcon(":/icons/filtereffect.png"));
 
     // 创建布局
     // 创建网格布局

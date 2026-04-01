@@ -128,6 +128,10 @@ private slots:
      * @brief 应用滤镜槽函数
      */
     void onFilter();
+    /**
+     * @brief 做旧槽函数
+     */
+    void onDistress();
 
     // 画布相关槽函数
     /**
