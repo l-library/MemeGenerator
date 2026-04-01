@@ -781,7 +781,30 @@ void MainWindow::onDistress()
     }
     CyberDistressingDialog distress_dialog(this);
     distress_dialog.setOriginalImage(sceneImage);
-    distress_dialog.exec();
+    if (distress_dialog.exec() == QDialog::Accepted)
+    {
+        QImage filteredImage = distress_dialog.getFilteredCopy();
+        if (!filteredImage.isNull() && m_canvasItem)
+        {
+            // 使用与getSceneImage()相同的逻辑获取画布区域
+            QRectF exportRect = getCanvasExportRect();
+            QSize intCanvasSize(exportRect.width(), exportRect.height());
+            QPointF pos(exportRect.x(),exportRect.y());
+
+            // 将滤镜图像缩放到画布大小
+            QImage scaledFilteredImage = filteredImage.scaled(
+                intCanvasSize,
+                Qt::IgnoreAspectRatio,
+                Qt::SmoothTransformation
+                );
+
+            ResizableItem *resultItem = new ResizableItem;
+            resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
+            addItemToScene(resultItem, pos);
+
+            QMessageBox::information(this, "滤镜应用", "滤镜已应用到新创建的图层中");
+        }
+    }
 }
 
 void MainWindow::onInsertPicture()

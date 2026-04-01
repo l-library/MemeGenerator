@@ -122,6 +122,8 @@ CyberDistressingDialog::CyberDistressingDialog(QWidget *parent)
 void CyberDistressingDialog::setOriginalImage(const QImage& image)
 {
     m_image = image;
+    m_filteredImage = image;
+    m_baseImage = image;
     updatePreview();
 }
 
@@ -133,7 +135,7 @@ void CyberDistressingDialog::updatePreview()
         return;
     }
 
-    m_filteredImage = applyFiltersForPreview(m_image);
+    applyFilters();
 
     QPixmap pixmap = QPixmap::fromImage(m_filteredImage);
 
@@ -148,66 +150,66 @@ void CyberDistressingDialog::updatePreview()
     m_display_label->setPixmap(scaledPixmap);
 }
 
-QImage CyberDistressingDialog::applyFilters(const QImage& origin_image)
+void CyberDistressingDialog::applyFilters()
 {
-    if (origin_image.isNull()) {
-        return origin_image;
+    if (m_image.isNull()) {
+        return;
     }
 
-    QImage result = origin_image.copy();
+    QImage tempImage = m_image;
 
-    if (m_scanLine) {
-        QPainter painter(&result);
-        painter.setPen(Qt::NoPen);
-
-        const int outputSpacing = 2;
-        const int scanLineHeight = 1;
-
-        int height = result.height();
-        for (int y = 0; y < height; y += outputSpacing) {
-            painter.setOpacity(0.15);
-            painter.setBrush(QColor(0, 0, 0));
-            painter.drawRect(0, y, result.width(), scanLineHeight);
+    if (m_resolution > 0) {
+        int newWidth = m_image.width() * (100 - m_resolution) / 100;
+        int newHeight = m_image.height() * (100 - m_resolution) / 100;
+        if (newWidth > 0 && newHeight > 0) {
+            tempImage = m_image.scaled(newWidth, newHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
-        painter.end();
     }
 
-    return result;
+    m_baseImage = tempImage;
+
+    if(m_scanLine) {
+        m_filteredImage = m_baseImage;
+        applyScanLine();
+    } else {
+        m_filteredImage = m_baseImage;
+    }
+
 }
 
-QImage CyberDistressingDialog::applyFiltersForPreview(const QImage& origin_image)
+void CyberDistressingDialog::applyScanLine()
 {
-    if (origin_image.isNull()) {
-        return origin_image;
+    QPainter painter(&m_filteredImage);
+    painter.setPen(Qt::NoPen);
+
+    const int scanLineSpacingOnScreen = 3;
+    QSize fixedSize(400, 300);
+    QSize scaledSize = fixedSize.boundedTo(m_filteredImage.size());
+    scaledSize.scale(fixedSize, Qt::KeepAspectRatio);
+
+    double scaleX = static_cast<double>(m_filteredImage.width()) / scaledSize.width();
+    double scaleY = static_cast<double>(m_filteredImage.height()) / scaledSize.height();
+    double scale = qMax(scaleX, scaleY);
+
+    int spacing = qMax(1, static_cast<int>(scanLineSpacingOnScreen * scale));
+
+    int height = m_filteredImage.height();
+    for (int y = 0; y < height; y += spacing) {
+        painter.setOpacity(0.15);
+        painter.setBrush(QColor(0, 0, 0));
+        painter.drawRect(0, y, m_filteredImage.width(), qMax(1, spacing / 2));
     }
+    painter.end();
+}
 
-    QImage result = origin_image.copy();
+void CyberDistressingDialog::undoScanLine()
+{
+    m_filteredImage = m_baseImage;
+}
 
-    if (m_scanLine) {
-        QPainter painter(&result);
-        painter.setPen(Qt::NoPen);
-
-        const int scanLineSpacingOnScreen = 3;
-        QSize fixedSize(400, 300);
-        QSize scaledSize = fixedSize.boundedTo(origin_image.size());
-        scaledSize.scale(fixedSize, Qt::KeepAspectRatio);
-
-        double scaleX = static_cast<double>(origin_image.width()) / scaledSize.width();
-        double scaleY = static_cast<double>(origin_image.height()) / scaledSize.height();
-        double scale = qMax(scaleX, scaleY);
-
-        int spacing = qMax(1, static_cast<int>(scanLineSpacingOnScreen * scale));
-
-        int height = result.height();
-        for (int y = 0; y < height; y += spacing) {
-            painter.setOpacity(0.15);
-            painter.setBrush(QColor(0, 0, 0));
-            painter.drawRect(0, y, result.width(), qMax(1, spacing / 2));
-        }
-        painter.end();
-    }
-
-    return result;
+QImage CyberDistressingDialog::getFilteredCopy()
+{
+    return m_filteredImage;
 }
 
 CyberDistressingDialog::~CyberDistressingDialog()
