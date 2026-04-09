@@ -23,6 +23,10 @@ private:
     void applyScanLine();
     void undoScanLine();
 
+    void applyResolution();
+
+    void applyNoise();
+
     QImage m_image;
     QImage m_filteredImage;
     QImage m_baseImage;

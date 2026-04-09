@@ -6,6 +6,7 @@
 #include <QSlider>
 #include <QCheckBox>
 #include <QPainter>
+#include <QRandomGenerator>
 
 CyberDistressingDialog::CyberDistressingDialog(QWidget *parent)
     : QDialog(parent), m_image(), m_resolution(0), m_color(0), m_noise(0), m_watermark(0), m_scanLine(false)
@@ -156,25 +157,19 @@ void CyberDistressingDialog::applyFilters()
         return;
     }
 
-    QImage tempImage = m_image;
-
     if (m_resolution > 0) {
-        int newWidth = m_image.width() * (100 - m_resolution) / 100;
-        int newHeight = m_image.height() * (100 - m_resolution) / 100;
-        if (newWidth > 0 && newHeight > 0) {
-            tempImage = m_image.scaled(newWidth, newHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        }
+        applyResolution();
     }
 
-    m_baseImage = tempImage;
+    m_filteredImage = m_baseImage;
+
+    if (m_noise > 0) {
+        applyNoise();
+    }
 
     if(m_scanLine) {
-        m_filteredImage = m_baseImage;
         applyScanLine();
-    } else {
-        m_filteredImage = m_baseImage;
     }
-
 }
 
 void CyberDistressingDialog::applyScanLine()
@@ -195,7 +190,7 @@ void CyberDistressingDialog::applyScanLine()
 
     int height = m_filteredImage.height();
     for (int y = 0; y < height; y += spacing) {
-        painter.setOpacity(0.15);
+        painter.setOpacity(0.2);
         painter.setBrush(QColor(0, 0, 0));
         painter.drawRect(0, y, m_filteredImage.width(), qMax(1, spacing / 2));
     }
@@ -205,6 +200,77 @@ void CyberDistressingDialog::applyScanLine()
 void CyberDistressingDialog::undoScanLine()
 {
     m_filteredImage = m_baseImage;
+}
+
+void CyberDistressingDialog::applyResolution()
+{
+    qreal scale = (100.0 - m_resolution) / 100;
+    if(scale==0) // 防止m_resolution=100的情况
+        scale = 0.001;
+    int newWidth = m_image.width() * scale;
+    int newHeight = m_image.height() * scale;
+    if (newWidth > 0 && newHeight > 0) {
+        m_baseImage = m_image.scaled(newWidth, newHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+}
+
+void CyberDistressingDialog::applyNoise()
+{
+    if (m_noise <= 0) return;
+
+    QImage noiseImage = m_filteredImage;
+    int width = noiseImage.width();
+    int height = noiseImage.height();
+
+    const int blockSize = 8;
+    double baseIntensity = m_noise / 100.0;
+
+    QRandomGenerator random;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int blockX = (x / blockSize) * blockSize;
+            int blockY = (y / blockSize) * blockSize;
+
+            quint32 blockSeed = (blockX * 313 + blockY * 411 + blockX * blockY * 557) & 0xFFFF;
+            quint32 pixelSeed = (x * 713 + y * 1009 + x * y * 1321) & 0xFFFF;
+
+            random.seed(blockSeed);
+            double blockNoise = (random.bounded(200) - 100) / 100.0;
+
+            random.seed(pixelSeed);
+            double pixelNoise = (random.bounded(200) - 100) / 100.0;
+
+            double combinedNoise = blockNoise * 0.7 + pixelNoise * 0.3;
+            combinedNoise *= baseIntensity;
+
+            QColor pixel = noiseImage.pixel(x, y);
+            int r = pixel.red();
+            int g = pixel.green();
+            int b = pixel.blue();
+
+            int noiseValue = static_cast<int>(combinedNoise * 50);
+            r = qBound(0, r + noiseValue, 255);
+            g = qBound(0, g + noiseValue, 255);
+            b = qBound(0, b + noiseValue, 255);
+
+            if (colorIntensity > 0) {
+                random.seed(pixelSeed ^ 0xABCDEF);
+                int colorShiftR = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+                random.seed(pixelSeed ^ 0x123456);
+                int colorShiftG = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+                random.seed(pixelSeed ^ 0x789DEF);
+                int colorShiftB = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+
+                r = qBound(0, r + colorShiftR, 255);
+                g = qBound(0, g + colorShiftG, 255);
+                b = qBound(0, b + colorShiftB, 255);
+            }
+
+            noiseImage.setPixel(x, y, qRgb(r, g, b));
+        }
+    }
+
+    m_filteredImage = noiseImage;
 }
 
 QImage CyberDistressingDialog::getFilteredCopy()
