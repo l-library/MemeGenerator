@@ -21,7 +21,7 @@
 #include <QMimeData>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
-#include "DimOutsideCanvasEffect.h"
+#include "dimoutsidecanvaseffect.h"
 #include "filterdialog.h"
 #include "cyberdistressingdialog.h"
 

@@ -253,18 +253,18 @@ void CyberDistressingDialog::applyNoise()
             g = qBound(0, g + noiseValue, 255);
             b = qBound(0, b + noiseValue, 255);
 
-            if (colorIntensity > 0) {
-                random.seed(pixelSeed ^ 0xABCDEF);
-                int colorShiftR = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
-                random.seed(pixelSeed ^ 0x123456);
-                int colorShiftG = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
-                random.seed(pixelSeed ^ 0x789DEF);
-                int colorShiftB = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+            // if (colorIntensity > 0) {
+            //     random.seed(pixelSeed ^ 0xABCDEF);
+            //     int colorShiftR = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+            //     random.seed(pixelSeed ^ 0x123456);
+            //     int colorShiftG = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
+            //     random.seed(pixelSeed ^ 0x789DEF);
+            //     int colorShiftB = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
 
-                r = qBound(0, r + colorShiftR, 255);
-                g = qBound(0, g + colorShiftG, 255);
-                b = qBound(0, b + colorShiftB, 255);
-            }
+            //     r = qBound(0, r + colorShiftR, 255);
+            //     g = qBound(0, g + colorShiftG, 255);
+            //     b = qBound(0, b + colorShiftB, 255);
+            // }
 
             noiseImage.setPixel(x, y, qRgb(r, g, b));
         }
