@@ -27,6 +27,8 @@ private:
 
     void applyNoise();
 
+    void applyColor();
+
     QImage m_image;
     QImage m_filteredImage;
     QImage m_baseImage;

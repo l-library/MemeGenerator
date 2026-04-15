@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QPainter>
 #include <QRandomGenerator>
+#include <QBuffer>
 
 CyberDistressingDialog::CyberDistressingDialog(QWidget *parent)
     : QDialog(parent), m_image(), m_resolution(0), m_color(0), m_noise(0), m_watermark(0), m_scanLine(false)
@@ -167,6 +168,10 @@ void CyberDistressingDialog::applyFilters()
         applyNoise();
     }
 
+    if(m_color>0){
+        applyColor();
+    }
+
     if(m_scanLine) {
         applyScanLine();
     }
@@ -216,61 +221,113 @@ void CyberDistressingDialog::applyResolution()
 
 void CyberDistressingDialog::applyNoise()
 {
-    if (m_noise <= 0) return;
+    if (m_image.isNull() || m_noise == 0) {
+        return;
+    }
 
-    QImage noiseImage = m_filteredImage;
-    int width = noiseImage.width();
-    int height = noiseImage.height();
+    QImage workImage = m_filteredImage;
+    int iterations = m_noise / 10 + 3;
+    int quality = qMax(5, 100 - m_noise);
 
-    const int blockSize = 8;
-    double baseIntensity = m_noise / 100.0;
+    for (int iter = 0; iter < iterations; ++iter) {
+        QBuffer buffer;
+        buffer.open(QIODevice::WriteOnly);
+        workImage.save(&buffer, "JPEG", quality);
+        QImage compressed;
+        compressed.loadFromData(buffer.buffer(), "JPEG");
+        workImage = compressed.isNull() ? m_filteredImage : compressed;
+    }
 
-    QRandomGenerator random;
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            int blockX = (x / blockSize) * blockSize;
-            int blockY = (y / blockSize) * blockSize;
+    QImage result = workImage;
+    int width = result.width();
+    int height = result.height();
 
-            quint32 blockSeed = (blockX * 313 + blockY * 411 + blockX * blockY * 557) & 0xFFFF;
-            quint32 pixelSeed = (x * 713 + y * 1009 + x * y * 1321) & 0xFFFF;
+    m_filteredImage = result;
+}
 
-            random.seed(blockSeed);
-            double blockNoise = (random.bounded(200) - 100) / 100.0;
+void CyberDistressingDialog::applyColor()
+{
+    if (m_filteredImage.isNull() || m_color == 0) {
+        return;
+    }
 
-            random.seed(pixelSeed);
-            double pixelNoise = (random.bounded(200) - 100) / 100.0;
+    QImage result = m_filteredImage;
+    int width = result.width();
+    int height = result.height();
+    int intensity = m_color;
 
-            double combinedNoise = blockNoise * 0.7 + pixelNoise * 0.3;
-            combinedNoise *= baseIntensity;
-
-            QColor pixel = noiseImage.pixel(x, y);
-            int r = pixel.red();
-            int g = pixel.green();
-            int b = pixel.blue();
-
-            int noiseValue = static_cast<int>(combinedNoise * 50);
-            r = qBound(0, r + noiseValue, 255);
-            g = qBound(0, g + noiseValue, 255);
-            b = qBound(0, b + noiseValue, 255);
-
-            // if (colorIntensity > 0) {
-            //     random.seed(pixelSeed ^ 0xABCDEF);
-            //     int colorShiftR = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
-            //     random.seed(pixelSeed ^ 0x123456);
-            //     int colorShiftG = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
-            //     random.seed(pixelSeed ^ 0x789DEF);
-            //     int colorShiftB = static_cast<int>((random.bounded(200) - 100) / 100.0 * colorIntensity * 40);
-
-            //     r = qBound(0, r + colorShiftR, 255);
-            //     g = qBound(0, g + colorShiftG, 255);
-            //     b = qBound(0, b + colorShiftB, 255);
-            // }
-
-            noiseImage.setPixel(x, y, qRgb(r, g, b));
+    for (int y = 0; y < height; y += 8) {
+        for (int x = 0; x < width; x += 8) {
+            if (QRandomGenerator::global()->bounded(100) < 25) {
+                int offset = QRandomGenerator::global()->bounded(-intensity / 3, intensity / 3 + 1);
+                for (int by = 0; by < 8 && y + by < height; ++by) {
+                    for (int bx = 0; bx < 8 && x + bx < width; ++bx) {
+                        QRgb pixel = result.pixel(x + bx, y + by);
+                        int r = qBound(0, qRed(pixel) + offset, 255);
+                        int g = qBound(0, qGreen(pixel) + offset, 255);
+                        int b = qBound(0, qBlue(pixel) + offset, 255);
+                        result.setPixel(x + bx, y + by, qRgb(r, g, b));
+                    }
+                }
+            }
         }
     }
 
-    m_filteredImage = noiseImage;
+    for (int y = 0; y < height; y += 4) {
+        for (int x = 0; x < width; x += 4) {
+            if (QRandomGenerator::global()->bounded(100) < 15) {
+                int rOffset = QRandomGenerator::global()->bounded(-intensity / 2, intensity / 2 + 1);
+                int gOffset = QRandomGenerator::global()->bounded(-intensity / 2, intensity / 2 + 1);
+                int bOffset = QRandomGenerator::global()->bounded(-intensity / 2, intensity / 2 + 1);
+                for (int by = 0; by < 4 && y + by < height; ++by) {
+                    for (int bx = 0; bx < 4 && x + bx < width; ++bx) {
+                        QRgb pixel = result.pixel(x + bx, y + by);
+                        int r = qBound(0, qRed(pixel) + rOffset, 255);
+                        int g = qBound(0, qGreen(pixel) + gOffset, 255);
+                        int b = qBound(0, qBlue(pixel) + bOffset, 255);
+                        result.setPixel(x + bx, y + by, qRgb(r, g, b));
+                    }
+                }
+            }
+        }
+    }
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            if (QRandomGenerator::global()->bounded(100) < 2) {
+                QRgb pixel = result.pixel(x, y);
+                int r = qRed(pixel);
+                int g = qGreen(pixel);
+                int b = qBlue(pixel);
+                int maxC = qMax(r, qMax(g, b));
+                int minC = qMin(r, qMin(g, b));
+                if (maxC - minC > 50) {
+                    int shift = QRandomGenerator::global()->bounded(-intensity / 4, intensity / 4 + 1);
+                    if (QRandomGenerator::global()->bounded(2) == 0) {
+                        r = qBound(0, r + shift, 255);
+                    } else {
+                        b = qBound(0, b + shift, 255);
+                    }
+                    result.setPixel(x, y, qRgb(r, g, b));
+                }
+            }
+        }
+    }
+
+    for (int y = 1; y < height - 1; ++y) {
+        for (int x = 1; x < width - 1; ++x) {
+            if (QRandomGenerator::global()->bounded(100) < 5) {
+                QRgb p1 = result.pixel(x - 1, y - 1);
+                QRgb p2 = result.pixel(x + 1, y + 1);
+                int r = qBound(0, (qRed(p1) + qRed(p2)) / 2 + QRandomGenerator::global()->bounded(-intensity / 5, intensity / 5 + 1), 255);
+                int g = qBound(0, (qGreen(p1) + qGreen(p2)) / 2 + QRandomGenerator::global()->bounded(-intensity / 5, intensity / 5 + 1), 255);
+                int b = qBound(0, (qBlue(p1) + qBlue(p2)) / 2 + QRandomGenerator::global()->bounded(-intensity / 5, intensity / 5 + 1), 255);
+                result.setPixel(x, y, qRgb(r, g, b));
+            }
+        }
+    }
+
+    m_filteredImage = result;
 }
 
 QImage CyberDistressingDialog::getFilteredCopy()

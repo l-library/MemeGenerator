@@ -635,9 +635,23 @@ void MainWindow::save(QString title)
               "所有文件 (*.*)";
 
     // 保存文件
-    QString path = QFileDialog::getSaveFileName(this, title, "/untitled", filter);
+    QString path = QFileDialog::getSaveFileName(this, title, "/未命名", filter);
     if (!path.isEmpty())
     {
+    // 从选中的过滤器中提取后缀
+    QRegularExpression re("\\*\\.([a-zA-Z0-9]+)");
+    auto match = re.match(filter);
+    
+    if (match.hasMatch()) {
+        QString suffix = match.captured(1);  // 例如 "png"
+        QFileInfo fi(path);
+        // 如果没有后缀或后缀不匹配，则追加
+        if (fi.suffix().isEmpty()) {
+            path += "." + suffix;
+        }
+    }
+    
+    // 使用 fileName 保存文件...
         // 根据文件扩展名选择保存格式
         if (path.endsWith(".png", Qt::CaseInsensitive))
         {
