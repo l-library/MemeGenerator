@@ -26,7 +26,6 @@ set(SOURCES
 set(HEADERS
     commands.h
     cyberdistressingdialog.h
-    dimoutsidecanvaseffect.h
     filterdialog.h
     imagecropperdialog.h
     imagecropperlabel.h

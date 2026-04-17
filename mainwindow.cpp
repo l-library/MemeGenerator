@@ -21,7 +21,6 @@
 #include <QMimeData>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
-#include "dimoutsidecanvaseffect.h"
 #include "filterdialog.h"
 #include "cyberdistressingdialog.h"
 
@@ -1350,9 +1349,6 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item, QPointF set_pos)
                     { onSetCanvasSize(); });
         }
     }
-
-    DimOutsideCanvasEffect *effect = new DimOutsideCanvasEffect(item, m_canvasItem);
-    item->setGraphicsEffect(effect);
 }
 
 void MainWindow::removeItemFromScene(ResizableItem *item)

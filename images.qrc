@@ -25,5 +25,7 @@
         <file>icons/reset.png</file>
         <file>icons/delete.png</file>
         <file>icons/distress.png</file>
+        <file>images/watermark1.png</file>
+        <file>config/UserName.json</file>
     </qresource>
 </RCC>

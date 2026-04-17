@@ -22,12 +22,12 @@ private:
 
     void applyScanLine();
     void undoScanLine();
-
     void applyResolution();
-
     void applyNoise();
-
     void applyColor();
+    void applyWaterMark();
+
+    void drawWaterMark(QString name);
 
     QImage m_image;
     QImage m_filteredImage;
@@ -39,8 +39,17 @@ private:
     bool m_scanLine;
     bool m_board;
 
+    bool need_to_change_mark;
+
     const int m_OutputSpacing = 2;
     const int m_ScanLineHeight = 1;
+
+    enum MarkPosition{
+    Center,
+    BottomLeft,
+    BottomRight,
+    BottomCenter
+    };
 };
 
 #endif // CYBERDISTRESSINGDIALOG_H

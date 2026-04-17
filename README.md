@@ -2,7 +2,7 @@
 
 一款基于Qt框架开发的跨平台表情包生成工具，支持图片编辑、文本添加、滤镜效果、裁剪缩放等功能，操作简单直观。
 
-![初始界面](./screenshots/1.png)
+![初始界面](./images/screenshots/1.png)
 
 ## 功能特性
 
@@ -58,10 +58,10 @@ mingw32-make
 
 | 功能     | 截图                                   |
 | -------- | -------------------------------------- |
-| 初始界面 | ![初始界面](./screenshots/1.png)       |
-| 裁剪功能 | ![裁剪功能](./screenshots/2.png)       |
-| 文本编辑 | ![插入文本并编辑](./screenshots/3.png) |
-| 滤镜效果 | ![滤镜功能](./screenshots/4.png)       |
+| 初始界面 | ![初始界面](./images/screenshots/1.png)       |
+| 裁剪功能 | ![裁剪功能](./images/screenshots/2.png)       |
+| 文本编辑 | ![插入文本并编辑](./images/screenshots/3.png) |
+| 滤镜效果 | ![滤镜功能](./images/screenshots/4.png)       |
 
 ## 项目结构
 
