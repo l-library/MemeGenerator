@@ -116,8 +116,8 @@ void MainWindow::initButton()
 {
     // 放大缩小按钮
     auto zoom_in_out_layout = new QGridLayout(this);
-    zoom_in_out_layout->setColumnStretch(0,50);
-    zoom_in_out_layout->setColumnStretch(1,50);
+    zoom_in_out_layout->setColumnStretch(0, 50);
+    zoom_in_out_layout->setColumnStretch(1, 50);
     m_grid_layout->addLayout(zoom_in_out_layout, 0, 2);
     QPushButton *zoomIn = new QPushButton(this);
     zoomIn->setText("放大");
@@ -133,8 +133,8 @@ void MainWindow::initButton()
     zoomOut->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connect(zoomOut, &QPushButton::pressed, [=]()
             { onZoomOut(); });
-    zoom_in_out_layout->addWidget(zoomOut,0,0);
-    zoom_in_out_layout->addWidget(zoomIn,0,1);
+    zoom_in_out_layout->addWidget(zoomOut, 0, 0);
+    zoom_in_out_layout->addWidget(zoomIn, 0, 1);
 
     // 画布编辑模式切换按钮
     QPushButton *canvasEditButton = new QPushButton(this);
@@ -637,20 +637,22 @@ void MainWindow::save(QString title)
     QString path = QFileDialog::getSaveFileName(this, title, "/未命名", filter);
     if (!path.isEmpty())
     {
-    // 从选中的过滤器中提取后缀
-    QRegularExpression re("\\*\\.([a-zA-Z0-9]+)");
-    auto match = re.match(filter);
-    
-    if (match.hasMatch()) {
-        QString suffix = match.captured(1);  // 例如 "png"
-        QFileInfo fi(path);
-        // 如果没有后缀或后缀不匹配，则追加
-        if (fi.suffix().isEmpty()) {
-            path += "." + suffix;
+        // 从选中的过滤器中提取后缀
+        QRegularExpression re("\\*\\.([a-zA-Z0-9]+)");
+        auto match = re.match(filter);
+
+        if (match.hasMatch())
+        {
+            QString suffix = match.captured(1); // 例如 "png"
+            QFileInfo fi(path);
+            // 如果没有后缀或后缀不匹配，则追加
+            if (fi.suffix().isEmpty())
+            {
+                path += "." + suffix;
+            }
         }
-    }
-    
-    // 使用 fileName 保存文件...
+
+        // 使用 fileName 保存文件...
         // 根据文件扩展名选择保存格式
         if (path.endsWith(".png", Qt::CaseInsensitive))
         {
@@ -763,25 +765,25 @@ void MainWindow::onPaste()
 void MainWindow::onDeleteSelected()
 {
     // 获取场景中所有选中的项
-    QList<QGraphicsItem*> selectedItems = m_graphics_scene->selectedItems();
-    
+    QList<QGraphicsItem *> selectedItems = m_graphics_scene->selectedItems();
+
     if (selectedItems.isEmpty())
     {
         this->statusBar()->showMessage("没有选中的项目可删除");
         return;
     }
-    
+
     // 遍历所有选中的项，删除非画布项
-    for (QGraphicsItem* graphicsItem : selectedItems)
+    for (QGraphicsItem *graphicsItem : selectedItems)
     {
-        ResizableItem* item = dynamic_cast<ResizableItem*>(graphicsItem);
+        ResizableItem *item = dynamic_cast<ResizableItem *>(graphicsItem);
         if (item && item != m_canvasItem)
         {
             // 使用删除命令来支持撤销/重做
             pushCommand(new DeleteItemCommand(this, item));
         }
     }
-    
+
     this->statusBar()->showMessage(QString("删除了 %1 个项目").arg(selectedItems.size()));
 }
 
@@ -802,14 +804,13 @@ void MainWindow::onDistress()
             // 使用与getSceneImage()相同的逻辑获取画布区域
             QRectF exportRect = getCanvasExportRect();
             QSize intCanvasSize(exportRect.width(), exportRect.height());
-            QPointF pos(exportRect.x(),exportRect.y());
+            QPointF pos(exportRect.x(), exportRect.y());
 
             // 将滤镜图像缩放到画布大小
             QImage scaledFilteredImage = filteredImage.scaled(
                 intCanvasSize,
                 Qt::IgnoreAspectRatio,
-                Qt::SmoothTransformation
-                );
+                Qt::SmoothTransformation);
 
             ResizableItem *resultItem = new ResizableItem;
             resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
@@ -878,15 +879,14 @@ void MainWindow::onFilter()
             // 使用与getSceneImage()相同的逻辑获取画布区域
             QRectF exportRect = getCanvasExportRect();
             QSize intCanvasSize(exportRect.width(), exportRect.height());
-            QPointF pos(exportRect.x(),exportRect.y());
-            
+            QPointF pos(exportRect.x(), exportRect.y());
+
             // 将滤镜图像缩放到画布大小
             QImage scaledFilteredImage = filteredImage.scaled(
                 intCanvasSize,
                 Qt::IgnoreAspectRatio,
-                Qt::SmoothTransformation
-            );
-            
+                Qt::SmoothTransformation);
+
             ResizableItem *resultItem = new ResizableItem;
             resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
             addItemToScene(resultItem, pos);
@@ -1221,7 +1221,7 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item, QPointF set_pos)
     item->setAcceptHoverEvents(true);
 
     QPointF offset = set_pos;
-    if(set_pos.x() == -112 && set_pos.y() == -112)
+    if (set_pos.x() == -112 && set_pos.y() == -112)
         offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
     item->setPos(offset);
 
@@ -1302,8 +1302,7 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item, QPointF set_pos)
             connect(item, &ResizableItem::itemDeleteRequested, this, [this](ResizableItem *target)
                     {
                 // 创建删除命令，命令会处理item的删除和恢复
-                pushCommand(new DeleteItemCommand(this, target));
-            });
+                pushCommand(new DeleteItemCommand(this, target)); });
 
             connect(item, &ResizableItem::sizeChanged, this, [this](ResizableItem *)
                     {
@@ -1483,21 +1482,26 @@ void MainWindow::finishItemMove(ResizableItem *item)
 
 void MainWindow::wheelEvent(QWheelEvent *event)
 {
-    if (event->modifiers() & Qt::ControlModifier) {
+    if (event->modifiers() & Qt::ControlModifier)
+    {
         int delta = event->angleDelta().y(); // 正值表示向上滚动（放大），负值表示向下滚动（缩小）
 
-        if (delta > 0) {
-            onZoomIn();   // 放大
-        } else if (delta < 0) {
-            onZoomOut();  // 缩小
+        if (delta > 0)
+        {
+            onZoomIn(); // 放大
+        }
+        else if (delta < 0)
+        {
+            onZoomOut(); // 缩小
         }
 
-        event->accept();  // 事件已处理，不再传递
+        event->accept(); // 事件已处理，不再传递
     }
-    else {
-    // 未按下 Ctrl，交给基类处理
-    QMainWindow::wheelEvent(event);
-}
+    else
+    {
+        // 未按下 Ctrl，交给基类处理
+        QMainWindow::wheelEvent(event);
+    }
 }
 
 MainWindow::~MainWindow()
