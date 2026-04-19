@@ -128,6 +128,10 @@ private slots:
      * @brief 应用滤镜槽函数
      */
     void onFilter();
+    /**
+     * @brief 做旧槽函数
+     */
+    void onDistress();
 
     // 画布相关槽函数
     /**
@@ -200,7 +204,7 @@ private:
      * @brief 添加项目到场景
      * @param item 可调整大小的项目指针
      */
-    void addItemToScene(ResizableItem* item);
+    void addItemToScene(ResizableItem* item, QPointF pos = {-112, -112});
     /**
      * @brief 选择项目
      * @param item 要选择的项目指针
@@ -285,7 +289,7 @@ private:
     /**
      * @brief 直接添加项目到场景（不创建命令）
      */
-    void addItemToSceneDirectly(ResizableItem* item);
+    void addItemToSceneDirectly(ResizableItem* item, QPointF set_pos = {-112,-112});
     /**
      * @brief 从场景移除项目（不创建命令）
      */

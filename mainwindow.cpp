@@ -21,8 +21,8 @@
 #include <QMimeData>
 #include "resizableitem.h"
 #include "imagecropperdialog.h"
-#include "DimOutsideCanvasEffect.h"
 #include "filterdialog.h"
+#include "cyberdistressingdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -188,6 +188,16 @@ void MainWindow::initButton()
     connect(insert_filter, &QPushButton::pressed, [=]()
             { onFilter(); });
     m_grid_layout->addWidget(insert_filter, 5, 2);
+
+    // 做旧按钮
+    QPushButton *distress = new QPushButton(this);
+    distress->setText("赛博做旧");
+    distress->setStatusTip("给表情包加点时代的气息");
+    distress->setIcon(QIcon(":/icons/distress.png"));
+    distress->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(distress, &QPushButton::pressed, [=]()
+            { onDistress(); });
+    m_grid_layout->addWidget(distress, 6, 2);
 
     // 导出按钮
     QPushButton *save_file_button = new QPushButton(this);
@@ -371,6 +381,10 @@ void MainWindow::connectActionToSlot(const QString &slotName, QAction *action)
     {
         connect(action, &QAction::triggered, this, &MainWindow::onDeleteSelected);
     }
+    else if (slotName == "onDistress")
+    {
+        connect(action, &QAction::triggered, this, &MainWindow::onDistress);
+    }
 }
 
 QImage MainWindow::getImageFromFile(QString title)
@@ -511,7 +525,7 @@ void MainWindow::onOpenFile()
 }
 
 // 将图片添加到场景
-void MainWindow::addItemToScene(ResizableItem *item)
+void MainWindow::addItemToScene(ResizableItem *item, QPointF pos)
 {
     if (!item)
         return;
@@ -522,7 +536,7 @@ void MainWindow::addItemToScene(ResizableItem *item)
     }
     else
     {
-        pushCommand(new AddItemCommand(this, item));
+        pushCommand(new AddItemCommand(this, item, pos));
     }
 }
 
@@ -620,9 +634,23 @@ void MainWindow::save(QString title)
               "所有文件 (*.*)";
 
     // 保存文件
-    QString path = QFileDialog::getSaveFileName(this, title, "/untitled", filter);
+    QString path = QFileDialog::getSaveFileName(this, title, "/未命名", filter);
     if (!path.isEmpty())
     {
+    // 从选中的过滤器中提取后缀
+    QRegularExpression re("\\*\\.([a-zA-Z0-9]+)");
+    auto match = re.match(filter);
+    
+    if (match.hasMatch()) {
+        QString suffix = match.captured(1);  // 例如 "png"
+        QFileInfo fi(path);
+        // 如果没有后缀或后缀不匹配，则追加
+        if (fi.suffix().isEmpty()) {
+            path += "." + suffix;
+        }
+    }
+    
+    // 使用 fileName 保存文件...
         // 根据文件扩展名选择保存格式
         if (path.endsWith(".png", Qt::CaseInsensitive))
         {
@@ -757,6 +785,41 @@ void MainWindow::onDeleteSelected()
     this->statusBar()->showMessage(QString("删除了 %1 个项目").arg(selectedItems.size()));
 }
 
+void MainWindow::onDistress()
+{
+    QImage sceneImage = getSceneImage();
+    if (sceneImage.isNull())
+    {
+        return;
+    }
+    CyberDistressingDialog distress_dialog(this);
+    distress_dialog.setOriginalImage(sceneImage);
+    if (distress_dialog.exec() == QDialog::Accepted)
+    {
+        QImage filteredImage = distress_dialog.getFilteredCopy();
+        if (!filteredImage.isNull() && m_canvasItem)
+        {
+            // 使用与getSceneImage()相同的逻辑获取画布区域
+            QRectF exportRect = getCanvasExportRect();
+            QSize intCanvasSize(exportRect.width(), exportRect.height());
+            QPointF pos(exportRect.x(),exportRect.y());
+
+            // 将滤镜图像缩放到画布大小
+            QImage scaledFilteredImage = filteredImage.scaled(
+                intCanvasSize,
+                Qt::IgnoreAspectRatio,
+                Qt::SmoothTransformation
+                );
+
+            ResizableItem *resultItem = new ResizableItem;
+            resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
+            addItemToScene(resultItem, pos);
+
+            QMessageBox::information(this, "滤镜应用", "滤镜已应用到新创建的图层中");
+        }
+    }
+}
+
 void MainWindow::onInsertPicture()
 {
     QImage image = getImageFromFile("选择要插入的图片");
@@ -810,12 +873,23 @@ void MainWindow::onFilter()
     if (filterDialog.exec() == QDialog::Accepted)
     {
         QImage filteredImage = filterDialog.getFilteredCopy();
-        if (!filteredImage.isNull())
+        if (!filteredImage.isNull() && m_canvasItem)
         {
+            // 使用与getSceneImage()相同的逻辑获取画布区域
+            QRectF exportRect = getCanvasExportRect();
+            QSize intCanvasSize(exportRect.width(), exportRect.height());
+            QPointF pos(exportRect.x(),exportRect.y());
+            
+            // 将滤镜图像缩放到画布大小
+            QImage scaledFilteredImage = filteredImage.scaled(
+                intCanvasSize,
+                Qt::IgnoreAspectRatio,
+                Qt::SmoothTransformation
+            );
+            
             ResizableItem *resultItem = new ResizableItem;
-            resultItem->setPixmap(QPixmap::fromImage(filteredImage));
-            resultItem->setPos(m_canvasItem->pos());
-            addItemToScene(resultItem);
+            resultItem->setPixmap(QPixmap::fromImage(scaledFilteredImage));
+            addItemToScene(resultItem, pos);
 
             QMessageBox::information(this, "滤镜应用", "滤镜已应用到新创建的图层中");
         }
@@ -823,7 +897,7 @@ void MainWindow::onFilter()
 };
 void MainWindow::onAbout()
 {
-    QMessageBox::about(this, "关于", QString("<h3>表情包制作器 v0.1</h3>"
+    QMessageBox::about(this, "关于", QString("<h3>表情包制作器 v0.6</h3>"
                                              "<p>开发者：@l-library</p>"
                                              "<p>项目地址：<a href='https://github.com/l-library/MemeGenerator'>https://github.com/l-library/MemeGenerator</a></p>"));
 }
@@ -1109,7 +1183,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
-void MainWindow::addItemToSceneDirectly(ResizableItem *item)
+void MainWindow::addItemToSceneDirectly(ResizableItem *item, QPointF set_pos)
 {
     if (!item)
         return;
@@ -1146,7 +1220,9 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item)
     item->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
     item->setAcceptHoverEvents(true);
 
-    QPointF offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
+    QPointF offset = set_pos;
+    if(set_pos.x() == -112 && set_pos.y() == -112)
+        offset = m_canvasOffset + QPointF(m_items.size() * 20, m_items.size() * 20);
     item->setPos(offset);
 
     m_graphics_scene->addItem(item);
@@ -1273,9 +1349,6 @@ void MainWindow::addItemToSceneDirectly(ResizableItem *item)
                     { onSetCanvasSize(); });
         }
     }
-
-    DimOutsideCanvasEffect *effect = new DimOutsideCanvasEffect(item, m_canvasItem);
-    item->setGraphicsEffect(effect);
 }
 
 void MainWindow::removeItemFromScene(ResizableItem *item)

@@ -3,8 +3,8 @@
 #include "resizableitem.h"
 #include <QGraphicsScene>
 
-AddItemCommand::AddItemCommand(MainWindow *mainWindow, ResizableItem *item, QUndoCommand *parent)
-    : QUndoCommand(parent), m_mainWindow(mainWindow), m_item(item), m_ownsItem(false)
+AddItemCommand::AddItemCommand(MainWindow *mainWindow, ResizableItem *item,QPointF pos, QUndoCommand *parent)
+    : QUndoCommand(parent), m_mainWindow(mainWindow), m_item(item), m_position(pos), m_ownsItem(false)
 {
     setText(QObject::tr("添加项目"));
 }
@@ -32,7 +32,7 @@ void AddItemCommand::redo()
     if (!m_mainWindow || !m_item)
         return;
 
-    m_mainWindow->addItemToSceneDirectly(m_item);
+    m_mainWindow->addItemToSceneDirectly(m_item, m_position);
     m_ownsItem = false;
 }
 
