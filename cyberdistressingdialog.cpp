@@ -53,15 +53,6 @@ CyberDistressingDialog::CyberDistressingDialog(QWidget *parent)
         m_scanLine = checked;
         updatePreview(); });
 
-    QCheckBox *boardCheckBox = new QCheckBox(this);
-    boardCheckBox->setText("边框");
-    boardCheckBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_grid_layout->addWidget(boardCheckBox, 4, 2, 1, 2);
-    connect(boardCheckBox, &QCheckBox::toggled, this, [this](bool checked)
-            {
-        m_board = checked;
-        updatePreview(); });
-
     // 应用和取消按钮
     QPushButton *applyButton = new QPushButton(this);
     applyButton->setText("应用");
@@ -369,9 +360,6 @@ void CyberDistressingDialog::applyColor()
 
 void CyberDistressingDialog::applyWaterMark()
 {
-    QImage water_mark(":/icons/MemeGenerator.png");
-    // 生成要输出的用户名
-    QString user_name;
     // 打开配置文档
     QFile file(":/config/UserName.json");
     if (!file.open(QIODevice::ReadOnly))

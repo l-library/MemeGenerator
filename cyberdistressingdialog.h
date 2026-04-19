@@ -13,7 +13,7 @@ class CyberDistressingDialog : public QDialog
 public:
     explicit CyberDistressingDialog(QWidget *parent = nullptr);
     ~CyberDistressingDialog();
-    void setOriginalImage(const QImage& image);
+    void setOriginalImage(const QImage &image);
     QImage getFilteredCopy();
 
 private:
@@ -32,23 +32,23 @@ private:
     QImage m_image;
     QImage m_filteredImage;
     QImage m_baseImage;
-    QGridLayout* m_grid_layout;
-    QLabel* m_display_label;
+    QGridLayout *m_grid_layout;
+    QLabel *m_display_label;
 
     int m_resolution, m_color, m_noise, m_watermark;
     bool m_scanLine;
-    bool m_board;
 
     bool need_to_change_mark;
 
     const int m_OutputSpacing = 2;
     const int m_ScanLineHeight = 1;
 
-    enum MarkPosition{
-    Center,
-    BottomLeft,
-    BottomRight,
-    BottomCenter
+    enum MarkPosition
+    {
+        Center,
+        BottomLeft,
+        BottomRight,
+        BottomCenter
     };
 };
 
